@@ -11,6 +11,7 @@ import { AdminDashboard } from "../components/AdminDashboard";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import {
   apiGetQuestions,
+  apiGetState,
   apiSubmitQuiz,
   EXAM_DURATION_SECONDS,
   TOTAL_QUESTIONS,
@@ -34,18 +35,40 @@ export default function Home() {
 
   const { isOnline } = useOfflineSync(student?.studentId || "");
 
-  // Check for admin session or admin URL parameter on page mount
+  // Check for admin session or active student session on page mount / refresh
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get("admin") === "true" || urlParams.get("admin") === "1" || urlParams.get("admin") === "kindle_jr_5_admin_secret_2026") {
+        if (
+          urlParams.get("admin") === "true" ||
+          urlParams.get("admin") === "1" ||
+          urlParams.get("admin") === "kindle_jr_5_admin_secret_2026"
+        ) {
           sessionStorage.setItem("admin_session", "true");
           setStep("admin");
           return;
         }
         if (sessionStorage.getItem("admin_session") === "true") {
           setStep("admin");
+          return;
+        }
+
+        // Auto-restore active student session on page refresh
+        const savedStudentId =
+          sessionStorage.getItem("kindle_active_student_id") ||
+          localStorage.getItem("kindle_active_student_id");
+
+        if (savedStudentId) {
+          apiGetState(savedStudentId)
+            .then((stateRes: any) => {
+              if (stateRes && stateRes.student) {
+                handleRestoreState(stateRes);
+              }
+            })
+            .catch((err: any) => {
+              console.warn("Failed to auto-restore session on refresh:", err);
+            });
         }
       }
     } catch {}
@@ -65,6 +88,10 @@ export default function Home() {
 
   // Registration Completed
   const handleRegistrationComplete = (registeredStudent: StudentData) => {
+    try {
+      sessionStorage.setItem("kindle_active_student_id", registeredStudent.studentId);
+      localStorage.setItem("kindle_active_student_id", registeredStudent.studentId);
+    } catch {}
     setStudent(registeredStudent);
     setStep("track");
   };
@@ -81,6 +108,10 @@ export default function Home() {
     shuffled: number[]
   ) => {
     if (!student) return;
+    try {
+      sessionStorage.setItem("kindle_active_student_id", student.studentId);
+      localStorage.setItem("kindle_active_student_id", student.studentId);
+    } catch {}
     setStudent((prev) => (prev ? { ...prev, selectedTrack: track } : null));
     setQuestions(fetchedQuestions);
     setShuffledOrder(shuffled);
@@ -98,6 +129,10 @@ export default function Home() {
     shouldAutoSubmit?: boolean;
   }) => {
     const st = stateRes.student;
+    try {
+      sessionStorage.setItem("kindle_active_student_id", st.studentId);
+      localStorage.setItem("kindle_active_student_id", st.studentId);
+    } catch {}
     setStudent(st);
 
     if (st.isSubmitted) {
@@ -186,6 +221,47 @@ export default function Home() {
           setStep("register");
         }}
       />
+    );
+  }
+
+  // If Quiz is active, render full-screen dedicated Quiz Engine
+  if (step === "quiz" && student && questions.length > 0) {
+    return (
+      <main className="min-h-screen w-full bg-slate-50 text-slate-900 font-sans pt-4">
+        <QuizEngine
+          student={student}
+          questions={questions}
+          shuffledOrder={shuffledOrder}
+          initialCurrentIndex={currentQuestionIndex}
+          initialAnswers={answers}
+          initialRemainingSeconds={remainingSeconds}
+          onSubmitted={handleQuizSubmitted}
+        />
+      </main>
+    );
+  }
+
+  // If Submitted, render dedicated full-screen submission view
+  if (step === "submitted" && student && submissionDetails) {
+    return (
+      <main className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-xl">
+          {recoveryNotice && (
+            <div className="mb-4 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800 shadow-sm">
+              {recoveryNotice}
+            </div>
+          )}
+          <SubmissionView
+            student={student}
+            score={submissionDetails.totalScore}
+            correctCount={submissionDetails.correctCount}
+            incorrectCount={submissionDetails.incorrectCount}
+            unattemptedCount={submissionDetails.unattemptedCount}
+            totalQuestions={TOTAL_QUESTIONS}
+            strikesCount={submissionDetails.strikesCount}
+          />
+        </div>
+      </main>
     );
   }
 
@@ -323,39 +399,6 @@ export default function Home() {
           >
             <TrackSelection student={student} onTrackInit={handleTrackInit} />
           </motion.div>
-        )}
-
-        {step === "quiz" && student && questions.length > 0 && (
-          <div className="w-full max-w-6xl">
-            <QuizEngine
-              student={student}
-              questions={questions}
-              shuffledOrder={shuffledOrder}
-              initialCurrentIndex={currentQuestionIndex}
-              initialAnswers={answers}
-              initialRemainingSeconds={remainingSeconds}
-              onSubmitted={handleQuizSubmitted}
-            />
-          </div>
-        )}
-
-        {step === "submitted" && student && submissionDetails && (
-          <div className="w-full max-w-xl">
-            {recoveryNotice && (
-              <div className="mb-4 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800 shadow-sm">
-                {recoveryNotice}
-              </div>
-            )}
-            <SubmissionView
-              student={student}
-              score={submissionDetails.totalScore}
-              correctCount={submissionDetails.correctCount}
-              incorrectCount={submissionDetails.incorrectCount}
-              unattemptedCount={submissionDetails.unattemptedCount}
-              totalQuestions={TOTAL_QUESTIONS}
-              strikesCount={submissionDetails.strikesCount}
-            />
-          </div>
         )}
       </section>
     </main>

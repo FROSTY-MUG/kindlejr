@@ -2,7 +2,7 @@ import { google } from "googleapis";
 
 const COLUMN_TOTAL_SCORE = 11;
 const COLUMN_ELAPSED_SECS = 12;
-const COLUMN_COUNT = 16;
+const COLUMN_COUNT = 17;
 
 const HEADER = [
   "Rank",
@@ -21,6 +21,7 @@ const HEADER = [
   "Time Taken",
   "Submitted At",
   "Last Updated",
+  "Cheated",
 ];
 
 function getCredentials(): any | null {
@@ -171,7 +172,7 @@ export async function syncStudentRow(student: any) {
     student.course || "",
     student.enrollmentNum || "",
     student.selectedTrack || "-",
-    student.isSubmitted ? "Submitted" : "In Progress",
+    student.isSubmitted ? (student.cheated ? "Submitted (Cheated)" : "Submitted") : "In Progress",
     student.correctCount || 0,
     student.incorrectCount || 0,
     student.unattemptedCount || 0,
@@ -180,6 +181,7 @@ export async function syncStudentRow(student: any) {
     student.timeTakenFormatted || "-",
     student.submittedAt ? new Date(student.submittedAt).toISOString() : "-",
     new Date().toISOString(),
+    student.cheated ? "Yes" : "No",
   ];
 
   const targetA1 =

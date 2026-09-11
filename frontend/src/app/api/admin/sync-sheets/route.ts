@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       s.course || "",
       s.enrollmentNum || "",
       s.selectedTrack || "-",
-      s.isSubmitted ? "Submitted" : "In Progress",
+      s.isSubmitted ? (s.cheated ? "Submitted (Cheated)" : "Submitted") : "In Progress",
       s.correctCount || 0,
       s.incorrectCount || 0,
       s.unattemptedCount || 0,
@@ -98,11 +98,12 @@ export async function POST(req: NextRequest) {
       s.timeTakenFormatted || "-",
       s.submittedAt ? new Date(s.submittedAt).toISOString() : "-",
       new Date().toISOString(),
+      s.cheated ? "Yes" : "No",
     ]);
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A2:P`,
+      range: `${sheetName}!A2:Q`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: rows,
@@ -119,6 +120,15 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[API admin/sync-sheets] Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    let message = err?.message || "Failed to sync to Google Sheets";
+    if (
+      err?.status === 403 ||
+      message.includes("Google Sheets API has not been used") ||
+      message.includes("disabled")
+    ) {
+      message =
+        "Google Sheets API is not enabled in your Google Cloud Project. Enable it at: https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=67889274113";
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

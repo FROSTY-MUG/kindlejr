@@ -5,7 +5,7 @@ const BASE_URL = "/api";
 // Single source of truth for the exam duration. The backend uses the identical
 // value (4500s) in handlers/get_state.go, so the countdown, the local recovery
 // fallback and the server expiry check can never disagree.
-export const EXAM_DURATION_SECONDS = 4500; // 75 minutes (60m + 15m buffer)
+export const EXAM_DURATION_SECONDS = 3600; // 60 minutes
 export const TOTAL_QUESTIONS = 60;
 
 export interface StudentData {

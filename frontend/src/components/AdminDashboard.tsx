@@ -166,15 +166,69 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       s.cheated ? "Yes" : "No"
     ]);
 
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const tableHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"/>
+      </head>
+      <body>
+        <table border="1">
+          <thead>
+            <tr style="background-color: #1e3a8a; color: #ffffff; font-weight: bold; text-align: center;">
+              ${headers.map((h) => `<th style="padding: 10px; font-family: sans-serif;">${h}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody style="font-family: sans-serif; font-size: 13px;">
+            ${leaderboard
+              .map(
+                (s) => `
+              <tr>
+                <td style="text-align: center; font-weight: bold;">${s.rank}</td>
+                <td style="font-weight: bold;">${s.name || ""}</td>
+                <td style="mso-number-format:'\\@';">${s.studentId || ""}</td>
+                <td>${s.collegeEmail || ""}</td>
+                <td>${s.course || ""}</td>
+                <td style="mso-number-format:'\\@';">${s.enrollmentNum || ""}</td>
+                <td style="text-align: center;">${s.selectedTrack || "-"}</td>
+                <td style="text-align: center; font-weight: bold; color: ${
+                  s.cheated ? "#dc2626" : s.isSubmitted ? "#16a34a" : "#d97706"
+                };">
+                  ${s.cheated ? "Submitted (Cheated)" : s.isSubmitted ? "Submitted" : "In Progress"}
+                </td>
+                <td style="text-align: center; color: #16a34a; font-weight: bold;">${s.correctCount || 0}</td>
+                <td style="text-align: center; color: #dc2626; font-weight: bold;">${s.incorrectCount || 0}</td>
+                <td style="text-align: center; color: #64748b;">${s.unattemptedCount || 0}</td>
+                <td style="text-align: right; font-weight: bold; font-size: 15px;">${s.totalScore || 0}</td>
+                <td style="text-align: center;">${s.timeTakenFormatted || "-"}</td>
+                <td>${s.registeredAt || "-"}</td>
+                <td style="text-align: center; font-weight: bold; color: ${s.cheated ? "#dc2626" : "#16a34a"};">
+                  ${s.cheated ? "YES" : "NO"}
+                </td>
+              </tr>`
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([tableHtml], { type: "application/vnd.ms-excel;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `kindle_jr_5_0_submissions_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.href = url;
+    link.download = `kindle_jr_5_0_leaderboard_${new Date().toISOString().slice(0, 10)}.xls`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+
+    setTimeout(() => {
+      try {
+        if (link.parentNode) {
+          link.parentNode.removeChild(link);
+        }
+        URL.revokeObjectURL(url);
+      } catch {}
+    }, 5000);
   };
 
   return (

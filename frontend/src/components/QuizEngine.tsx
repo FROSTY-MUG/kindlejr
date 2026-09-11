@@ -125,6 +125,23 @@ function playSecuritySiren() {
   }
 }
 
+// Check if browser is in full-screen mode via API or display geometry (catches F11 & presentation mode)
+export const checkIsFullscreen = (): boolean => {
+  if (typeof window === "undefined" || typeof document === "undefined") return false;
+  const doc = document as any;
+  const hasFsElement = !!(
+    doc.fullscreenElement ||
+    doc.webkitFullscreenElement ||
+    doc.mozFullScreenElement ||
+    doc.msFullscreenElement
+  );
+  if (hasFsElement) return true;
+
+  const widthDiff = Math.abs(window.screen.width - window.innerWidth);
+  const heightDiff = Math.abs(window.screen.height - window.innerHeight);
+  return widthDiff <= 10 && heightDiff <= 10;
+};
+
 export const QuizEngine: React.FC<QuizEngineProps> = ({
   student,
   questions,
@@ -142,15 +159,22 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>("");
 
-  // Anti-Cheating state (2-Strike Rule: 1 warning -> 2nd strike terminates + plays loud siren)
-  const [violationCount, setViolationCount] = useState<number>(0);
+  // Anti-Cheating state (2-Strike Rule with storage persistence across refresh)
+  const [violationCount, setViolationCount] = useState<number>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const stored = sessionStorage.getItem(`kindle_strikes_${student.studentId}`);
+        if (stored) return parseInt(stored, 10) || 0;
+      }
+    } catch {}
+    return 0;
+  });
   const [showWarningToast, setShowWarningToast] = useState<boolean>(false);
   const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
   const [isSplitScreenActive, setIsSplitScreenActive] = useState<boolean>(false);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(() =>
-    typeof document !== "undefined" ? !!document.fullscreenElement : false
-  );
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(() => checkIsFullscreen());
   const [blockedActionNotice, setBlockedActionNotice] = useState<string>("");
+  const isExamStartedRef = useRef<boolean>(checkIsFullscreen());
 
   const { isOnline, queueOfflineAnswer } = useOfflineSync(student.studentId);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -277,41 +301,58 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, student.studentId, answers, violationCount, onSubmitted]);
+  }, [isSubmitting, student.studentId, answers, onSubmitted]);
 
-  // Anti-Cheating Event Listeners (Tab Switching & Focus Loss - Strict 2-Strike Rule)
+  const violationCountRef = useRef<number>(violationCount);
+  const lastViolationTimeRef = useRef<number>(0);
+
+  // Anti-Cheating Event Listeners (Tab Switching, Focus Loss, F11, & Full-Screen Tampering)
   useEffect(() => {
-    const handleViolation = () => {
-      setViolationCount((prev) => {
-        const newCount = prev + 1;
-        if (newCount >= 2) {
-          // Strike 2 ONLY: Close exam immediately and play loud alarm siren!
-          playSecuritySiren();
-          handleSubmit(true);
-        } else {
-          // Strike 1: Show 1st & only warning modal
-          setShowWarningToast(true);
-        }
-        return newCount;
-      });
+    const handleViolation = (reason = "Violation") => {
+      const now = Date.now();
+      // 350ms debounce: prevents visibilitychange + blur on the same action from double-counting,
+      // but immediately catches sequential tab switches or F11 toggles
+      if (now - lastViolationTimeRef.current < 350) {
+        return;
+      }
+      lastViolationTimeRef.current = now;
+
+      violationCountRef.current += 1;
+      const newCount = violationCountRef.current;
+      try {
+        sessionStorage.setItem(`kindle_strikes_${student.studentId}`, String(newCount));
+      } catch {}
+      setViolationCount(newCount);
+
+      if (newCount >= 2) {
+        // Strike 2: Terminate assessment immediately and sound loud acoustic siren
+        playSecuritySiren();
+        handleSubmit(true);
+      } else {
+        // Strike 1: Show final warning modal
+        setShowWarningToast(true);
+      }
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden && violationCount < 2) {
-        handleViolation();
+      if (document.hidden) {
+        handleViolation("Tab Switched");
       }
     };
 
     const handleBlur = () => {
-      if (violationCount < 2) {
-        handleViolation();
+      handleViolation("Window Lost Focus");
+    };
+
+    const verifyFullscreen = () => {
+      const isFs = checkIsFullscreen();
+      setIsFullscreen(isFs);
+      if (!isFs && isExamStartedRef.current) {
+        handleViolation("Exited Full-Screen Mode");
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleBlur);
-
-    // Strict Anti-Cheating Lockdown: Copy, Paste, Right-Click, Selection, DevTools, Extensions
+    // Strict Anti-Cheating Lockdown: Copy, Paste, Right-Click, Selection, DevTools, Shortcuts
     const notifyBlocked = (action: string) => {
       setBlockedActionNotice(`Security Alert: ${action} is strictly prohibited during the assessment.`);
       setTimeout(() => setBlockedActionNotice(""), 3500);
@@ -369,64 +410,94 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       return e.returnValue;
     };
 
-    // DevTools detection via F12, Shortcuts, and Window anomaly
     const triggerDevToolsAlert = (triggerName: string) => {
       try {
-        // Output large ASCII warning banner to console
         const nativeLog = console.warn || console.log;
-        nativeLog.call(console, `%c${ASCII_SECURITY_BANNER}`, "color: #ef4444; font-weight: bold; font-family: monospace; font-size: 11px;");
+        nativeLog.call(
+          console,
+          `%c${ASCII_SECURITY_BANNER}`,
+          "color: #ef4444; font-weight: bold; font-family: monospace; font-size: 11px;"
+        );
       } catch {}
       setShowDevToolsModal(true);
       notifyBlocked(triggerName);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      // 1. Intercept F11 & Escape: completely blocks native browser full-screen toggling
+      if (e.key === "F11" || e.keyCode === 122) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("F11 Key Press (Full-Screen Exit Attempt)");
+        return false;
+      }
 
+      if (e.key === "Escape" || e.keyCode === 27) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("Escape Key Press (Full-Screen Exit Attempt)");
+        return false;
+      }
+
+      // 2. Intercept DevTools keys
       if (e.key === "F12") {
         e.preventDefault();
+        e.stopPropagation();
         triggerDevToolsAlert("DevTools Access (F12)");
-        return;
+        return false;
       }
 
       if (e.key === "PrintScreen") {
         e.preventDefault();
         notifyBlocked("Screen Capture");
-        return;
+        return false;
       }
 
+      // 3. Intercept Ctrl / Meta shortcuts (Tab switching, new tabs, DevTools)
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       if (isCtrlOrCmd) {
         const key = e.key.toLowerCase();
+
+        // Block tab-switching shortcuts (Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+T, Ctrl+N, Ctrl+W)
+        if (e.key === "Tab" || key === "t" || key === "n" || key === "w") {
+          e.preventDefault();
+          e.stopPropagation();
+          handleViolation(`Tab Shortcut Blocked (Ctrl+${e.key.toUpperCase()})`);
+          return false;
+        }
+
         if (e.shiftKey && (key === "i" || key === "j" || key === "c" || key === "k")) {
           e.preventDefault();
+          e.stopPropagation();
           triggerDevToolsAlert("DevTools Shortcut");
-          return;
+          return false;
         }
 
         if (key === "u" || key === "s" || key === "p" || key === "a") {
           e.preventDefault();
+          e.stopPropagation();
           notifyBlocked(`Shortcut (Ctrl+${key.toUpperCase()})`);
-          return;
+          return false;
         }
 
         if (key === "c" || key === "v" || key === "x") {
           e.preventDefault();
+          e.stopPropagation();
           notifyBlocked(`Clipboard shortcut (Ctrl+${key.toUpperCase()})`);
-          return;
+          return false;
         }
       }
-    };
 
-    // Fullscreen and Split-Screen Monitoring
-    const handleFullscreenChange = () => {
-      const isFs = !!document.fullscreenElement;
-      setIsFullscreen(isFs);
-      if (!isFs && violationCount < 2) {
-        handleViolation();
+      // 4. Intercept Alt navigation shortcuts
+      if (e.altKey && (e.key === "Tab" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("Alt Navigation Attempt");
+        return false;
       }
     };
 
-    // DevTools & Split-Screen Detector
+    // DevTools Split-Screen Side-Panel Detector
     const checkDevToolsResize = () => {
       const threshold = 160;
       const isSplit =
@@ -438,14 +509,21 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       }
     };
 
-    // Global audio warmup on user gesture
     const unlockAudio = () => {
       getOrInitAudioContext();
     };
 
     document.addEventListener("pointerdown", unlockAudio);
     document.addEventListener("keydown", unlockAudio);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("fullscreenchange", verifyFullscreen);
+    (document as any).addEventListener?.("webkitfullscreenchange", verifyFullscreen);
+    (document as any).addEventListener?.("mozfullscreenchange", verifyFullscreen);
+    (document as any).addEventListener?.("MSFullscreenChange", verifyFullscreen);
+    window.addEventListener("resize", verifyFullscreen);
+    window.addEventListener("resize", checkDevToolsResize);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("copy", handleCopy);
     document.addEventListener("cut", handleCut);
@@ -453,35 +531,31 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     document.addEventListener("selectstart", handleSelectStart);
     document.addEventListener("dragstart", handleDragStart);
     document.addEventListener("drop", handleDrop);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("resize", checkDevToolsResize);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
-    // Initial fullscreen & split-screen check
-    const initialFs = typeof document !== "undefined" && !!document.fullscreenElement;
-    setIsFullscreen(initialFs);
+    // Initial fullscreen & DevTools check
+    verifyFullscreen();
     checkDevToolsResize();
-    try {
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().then(() => {
-          setIsFullscreen(true);
-        }).catch(() => {
-          setIsFullscreen(false);
-        });
-      }
-    } catch {
-      setIsFullscreen(false);
-    }
 
-    const interval = setInterval(checkDevToolsResize, 1000);
+    // 400ms Heartbeat: continuously checks geometry and catches F11 or silent un-fullscreening
+    const heartbeatInterval = setInterval(() => {
+      verifyFullscreen();
+      checkDevToolsResize();
+    }, 400);
 
     return () => {
-      clearInterval(interval);
+      clearInterval(heartbeatInterval);
       document.removeEventListener("pointerdown", unlockAudio);
       document.removeEventListener("keydown", unlockAudio);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("fullscreenchange", verifyFullscreen);
+      (document as any).removeEventListener?.("webkitfullscreenchange", verifyFullscreen);
+      (document as any).removeEventListener?.("mozfullscreenchange", verifyFullscreen);
+      (document as any).removeEventListener?.("MSFullscreenChange", verifyFullscreen);
+      window.removeEventListener("resize", verifyFullscreen);
+      window.removeEventListener("resize", checkDevToolsResize);
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("copy", handleCopy);
       document.removeEventListener("cut", handleCut);
@@ -489,18 +563,33 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       document.removeEventListener("selectstart", handleSelectStart);
       document.removeEventListener("dragstart", handleDragStart);
       document.removeEventListener("drop", handleDrop);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("resize", checkDevToolsResize);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [violationCount, handleSubmit]);
+  }, [handleSubmit, student.studentId]);
 
   const requestEnterFullscreen = () => {
     try {
-      document.documentElement.requestFullscreen().then(() => {
-        setIsFullscreen(true);
-      }).catch(() => {});
-    } catch {}
+      const el = document.documentElement as any;
+      const rfs =
+        el.requestFullscreen ||
+        el.webkitRequestFullscreen ||
+        el.mozRequestFullScreen ||
+        el.msRequestFullscreen;
+      if (rfs) {
+        rfs.call(el).then(() => {
+          setTimeout(() => {
+            const isFs = checkIsFullscreen();
+            setIsFullscreen(isFs);
+            if (isFs) isExamStartedRef.current = true;
+          }, 150);
+        }).catch((err: any) => {
+          console.warn("Fullscreen request error:", err);
+          setIsFullscreen(false);
+        });
+      }
+    } catch {
+      setIsFullscreen(false);
+    }
   };
 
   const persistCursor = (idx: number) => {
@@ -543,10 +632,10 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       data-gramm_editor="false"
       data-enable-grammarly="false"
     >
-      {/* Forced Fullscreen Enforcer Overlay */}
+      {/* Forced Fullscreen Enforcer Overlay - High Security Shield */}
       {!isFullscreen && violationCount < 2 && (
-        <div className="fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4">
-          <div className="bg-white border-4 border-rose-600 rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center space-y-6">
+        <div className="fixed inset-0 z-[9999] bg-slate-950/98 backdrop-blur-3xl flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-rose-600 rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-200">
             <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border-2 border-rose-300">
               <ShieldAlert className="w-12 h-12" />
             </div>
@@ -555,14 +644,14 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
                 Full-Screen Mode Required
               </h2>
               <p className="text-sm text-slate-600 mt-2 font-semibold">
-                Kindle Jr 5.0 assessment must be taken in exclusive full-screen mode to maintain test integrity.
+                Kindle Jr 5.0 assessment must be taken in exclusive full-screen mode to maintain test integrity. You cannot view questions or proceed in windowed mode.
               </p>
             </div>
             <button
               onClick={requestEnterFullscreen}
               className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-blue-600 hover:bg-blue-700 shadow-xl transition-all"
             >
-              Re-enter Full-Screen Mode
+              Enter Full-Screen Mode
             </button>
           </div>
         </div>

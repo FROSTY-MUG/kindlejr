@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
         timeTakenSeconds: s.timeTakenSeconds || 0,
         timeTakenFormatted: s.timeTakenFormatted || "-",
         isSubmitted: !!s.isSubmitted,
+        cheated: !!s.cheated,
         registeredAt: s.registeredAt || "",
       };
     });

@@ -37,6 +37,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+*.tsbuildinfo
+backend/data/*_cache.json
 
 # Internal cache
 .knox/

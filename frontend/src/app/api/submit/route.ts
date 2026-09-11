@@ -6,7 +6,7 @@ import { syncStudentRow } from "../../../lib/sheets";
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
-    const { studentId, answers } = payload;
+    const { studentId, answers, cheated } = payload;
 
     if (!studentId) {
       return NextResponse.json({ error: "studentId is required" }, { status: 400 });
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     let studentData: Record<string, any> = {
       studentId,
       answers: answers || {},
+      cheated: !!cheated,
     };
 
     if (db) {

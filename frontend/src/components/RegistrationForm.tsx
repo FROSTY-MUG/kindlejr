@@ -125,6 +125,11 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       setIsLookupLoading(false);
     }
 
+    try {
+      sessionStorage.setItem("kindle_active_student_id", sId);
+      localStorage.setItem("kindle_active_student_id", sId);
+    } catch {}
+
     onComplete({
       studentId: sId,
       name: name,
@@ -136,15 +141,20 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   };
 
   const handleResumeSession = async () => {
-    if (!formData.studentId.trim()) {
+    const sId = formData.studentId.trim();
+    if (!sId) {
       setLookupError("Enter your Student ID above to resume.");
       return;
     }
     setLookupError("");
     setIsLookupLoading(true);
     try {
-      const res = await apiGetState(formData.studentId.trim());
+      const res = await apiGetState(sId);
       if (res && res.student) {
+        try {
+          sessionStorage.setItem("kindle_active_student_id", sId);
+          localStorage.setItem("kindle_active_student_id", sId);
+        } catch {}
         onRestoreState(res);
       } else {
         setLookupError("No session found for this Student ID.");
