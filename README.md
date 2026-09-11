@@ -18,9 +18,18 @@ Real-time assessment platform built for **Kindle Jr 5.0**, an IEEE GEU SB hackat
 
 1. **Zero-Delay Auto-Save Registration**: Every keystroke in the student registration form fires a debounced (300 ms) payload to the Go backend (`/api/register`). No manual save button required.
 2. **Low-Latency Question Shuffling**: Upon selecting track (C or Python), the frontend fetches the question bank, shuffles the index array client-side once, and commits `shuffledOrder` to the backend.
-3. **Strict 70-Minute Timer Logic**: Starts strictly on Question 1 load. Timer recalculation formula on backend during reconnects:
-   $$\text{RemainingSeconds} = 4200 - \lfloor(\text{CurrentTime} - \text{StartedAt}).\text{Seconds}()\rfloor$$
-4. **Network Resilience & State Recovery**:
+3. **Strict 60-Minute Timer Logic**: Starts strictly on Question 1 load. Timer recalculation formula on backend during reconnects:
+   $$\text{RemainingSeconds} = 3600 - \lfloor(\text{CurrentTime} - \text{StartedAt}).\text{Seconds}()\rfloor$$
+4. **Proctoring & Anti-Cheat Protection**:
+   - 3-strike system for tab switching / loss of focus.
+   - Strike 1 & Strike 2: Warning toasts and modal alert.
+   - Strike 3: Automatic termination and submission of exam attempt.
+5. **Real-time Dual-Write Persistence & Sorting**:
+   - Every keystroke & answer saves to Firestore / resilient local store.
+   - Real-time row sync to Google Sheets (API v4) and dual sorting: **Total Marks (DESC)** then **Time Taken (ASC)**.
+   - Excel export (.csv with UTF-8 BOM) and direct integration with OneDrive Excel sheet (`kindlr jr 5.0 prod.xlsx`).
+   - Google Forms webhook ingestion fallback (`/api/webhook/google-forms`).
+6. **Network Resilience & State Recovery**:
    - Answers sync to backend immediately.
    - If network drops, responses queue in IndexedDB and flush automatically upon reconnection (`online` event).
    - Logging back in with Student ID restores exam state, timer, current question index, and all populated answers.
