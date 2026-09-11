@@ -47,15 +47,33 @@ const ASCII_SECURITY_BANNER = `
 ================================================================================
 `;
 
+let globalAudioCtx: AudioContext | null = null;
+
+function getOrInitAudioContext(): AudioContext | null {
+  try {
+    if (!globalAudioCtx) {
+      const AudioContextClass =
+        window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        globalAudioCtx = new AudioContextClass();
+      }
+    }
+    if (globalAudioCtx && globalAudioCtx.state === "suspended") {
+      globalAudioCtx.resume().catch(() => {});
+    }
+    return globalAudioCtx;
+  } catch {
+    return null;
+  }
+}
+
 // Synthesizes a blaring, forced loud security alarm siren via Web Audio API at maximum gain
 function playSecuritySiren() {
   try {
-    const AudioContextClass =
-      window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
+    const ctx = getOrInitAudioContext();
+    if (!ctx) return;
     if (ctx.state === "suspended") {
-      ctx.resume();
+      ctx.resume().catch(() => {});
     }
 
     // Dual Oscillators for piercing acoustic penetration
@@ -69,7 +87,7 @@ function playSecuritySiren() {
     osc1.frequency.setValueAtTime(850, ctx.currentTime);
     osc2.frequency.setValueAtTime(1400, ctx.currentTime);
 
-    // Rapid alternating siren modulation (600Hz <-> 1500Hz)
+    // Rapid alternating siren modulation (650Hz <-> 1800Hz)
     let isHigh = false;
     const interval = setInterval(() => {
       if (ctx.state === "closed") {
@@ -82,7 +100,7 @@ function playSecuritySiren() {
       osc1.frequency.setValueAtTime(f1, now);
       osc2.frequency.setValueAtTime(f2, now);
       isHigh = !isHigh;
-    }, 150);
+    }, 140);
 
     // Maximum gain (1.0 = full volume amplitude)
     gainNode.gain.setValueAtTime(1.0, ctx.currentTime);
@@ -100,7 +118,6 @@ function playSecuritySiren() {
       try {
         osc1.stop();
         osc2.stop();
-        ctx.close();
       } catch {}
     }, 60000);
   } catch (err) {
@@ -129,6 +146,8 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [violationCount, setViolationCount] = useState<number>(0);
   const [showWarningToast, setShowWarningToast] = useState<boolean>(false);
   const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
+  const [isSplitScreenActive, setIsSplitScreenActive] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(true);
   const [blockedActionNotice, setBlockedActionNotice] = useState<string>("");
 
   const { isOnline, queueOfflineAnswer } = useOfflineSync(student.studentId);
@@ -395,16 +414,35 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       }
     };
 
-    // DevTools Window Size Threshold Detector
+    // Fullscreen and Split-Screen Monitoring
+    const handleFullscreenChange = () => {
+      const isFs = !!document.fullscreenElement;
+      setIsFullscreen(isFs);
+      if (!isFs && violationCount < 2) {
+        handleViolation();
+      }
+    };
+
+    // DevTools & Split-Screen Detector
     const checkDevToolsResize = () => {
-      const threshold = 170;
-      const widthDiff = window.outerWidth - window.innerWidth > threshold;
-      const heightDiff = window.outerHeight - window.innerHeight > threshold;
-      if (widthDiff || heightDiff) {
+      const threshold = 160;
+      const isSplit =
+        window.outerWidth - window.innerWidth > threshold ||
+        window.outerHeight - window.innerHeight > threshold;
+      setIsSplitScreenActive(isSplit);
+      if (isSplit) {
         setShowDevToolsModal(true);
       }
     };
 
+    // Global audio warmup on user gesture
+    const unlockAudio = () => {
+      getOrInitAudioContext();
+    };
+
+    document.addEventListener("pointerdown", unlockAudio);
+    document.addEventListener("keydown", unlockAudio);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("copy", handleCopy);
     document.addEventListener("cut", handleCut);
@@ -416,7 +454,21 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     window.addEventListener("resize", checkDevToolsResize);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
+    // Initial fullscreen & split-screen check
+    checkDevToolsResize();
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch {}
+
+    const interval = setInterval(checkDevToolsResize, 1000);
+
     return () => {
+      clearInterval(interval);
+      document.removeEventListener("pointerdown", unlockAudio);
+      document.removeEventListener("keydown", unlockAudio);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
       document.removeEventListener("contextmenu", handleContextMenu);
@@ -431,6 +483,14 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [violationCount, handleSubmit]);
+
+  const requestEnterFullscreen = () => {
+    try {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(() => {});
+    } catch {}
+  };
 
   const persistCursor = (idx: number) => {
     if (!isOnline) return;
@@ -472,6 +532,31 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       data-gramm_editor="false"
       data-enable-grammarly="false"
     >
+      {/* Forced Fullscreen Enforcer Overlay */}
+      {!isFullscreen && violationCount < 2 && (
+        <div className="fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-rose-600 rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center space-y-6">
+            <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border-2 border-rose-300">
+              <ShieldAlert className="w-12 h-12" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-rose-600 uppercase tracking-tight">
+                Full-Screen Mode Required
+              </h2>
+              <p className="text-sm text-slate-600 mt-2 font-semibold">
+                Kindle Jr 5.0 assessment must be taken in exclusive full-screen mode to maintain test integrity.
+              </p>
+            </div>
+            <button
+              onClick={requestEnterFullscreen}
+              className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-blue-600 hover:bg-blue-700 shadow-xl transition-all"
+            >
+              Re-enter Full-Screen Mode
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Floating Anti-Cheat Lockdown Toast */}
       {blockedActionNotice && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[110] bg-rose-600 text-white px-6 py-3.5 rounded-2xl shadow-2xl border-2 border-rose-400 flex items-center gap-3 animate-bounce">
@@ -480,7 +565,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         </div>
       )}
 
-      {/* Brutal DevTools & Console Cheating Popup */}
+      {/* Brutal DevTools & Split-Screen Cheating Popup (Non-Dismissible while split screen is open) */}
       {showDevToolsModal && (
         <div className="fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
           <div className="bg-white border-4 border-rose-600 rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center space-y-6">
@@ -492,18 +577,26 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
                 hahaha u really thought we would over look this
               </h2>
               <p className="text-sm uppercase tracking-widest font-mono font-bold text-slate-500 mt-2">
-                Security Violation • Console & DevTools Blocked
+                Security Violation • Console & Side-Screen Blocked
               </p>
             </div>
             <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-5 text-left text-sm text-rose-900 font-medium leading-relaxed">
-              ⚠️ Developer Tools, inspect element, and console modifications are strictly monitored and prohibited during Kindle Jr 5.0. This attempt has been logged against your Student ID: <strong>{student.studentId}</strong>.
+              ⚠️ Developer Tools, inspect element, split-screen, and console modifications are strictly prohibited during Kindle Jr 5.0. This attempt has been logged against your Student ID: <strong>{student.studentId}</strong>.
             </div>
-            <button
-              onClick={() => setShowDevToolsModal(false)}
-              className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-rose-600 hover:bg-rose-700 shadow-xl transition-all"
-            >
-              Close & Return to Assessment
-            </button>
+
+            {isSplitScreenActive ? (
+              <div className="p-4 bg-rose-100 border-2 border-rose-400 rounded-2xl text-rose-900 text-xs font-bold flex flex-col gap-1">
+                <span>⛔ Side Inspector / Split-Screen Active!</span>
+                <span className="text-slate-600 font-normal">Close the side DevTools panel or maximize the window to unlock the assessment.</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowDevToolsModal(false)}
+                className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-rose-600 hover:bg-rose-700 shadow-xl transition-all"
+              >
+                Close & Return to Assessment
+              </button>
+            )}
           </div>
         </div>
       )}
