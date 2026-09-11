@@ -2,386 +2,841 @@
   {
     "id": "c_1",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will be the output of the following C code snippet?\n```c\nint x = 5, y = 10;\nif (x > 3 && y < 15)\n    printf(\"YES\");\nelse\n    printf(\"NO\");\n```",
-    "options": ["YES", "NO", "Compilation Error", "Nothing"],
-    "answer": "YES",
-    "explanation": "5 > 3 is true and 10 < 15 is true. Both true with && gives true, so YES is printed."
+    "section": "C Language",
+    "text": "C is known as a __________ language because compiled code requires recompilation to run on a different operating system or hardware architecture.",
+    "options": [
+      "Platform-independent",
+      "Platform-dependent",
+      "Interpreter-based",
+      "None of the above"
+    ],
+    "answer": "Platform-dependent",
+    "explanation": "Option B: Platform-dependent"
   },
   {
     "id": "c_2",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "Fill in the missing format specifier to print an integer variable `val` in C:\n`printf(\"Value = ___\", val);`",
-    "answer": "%d",
-    "explanation": "%d is the format specifier for signed integer in C."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "To write and run a C program, the source code must first be translated into machine code by a ___________.",
+    "options": [
+      "Compiler",
+      "Interpreter",
+      "Linker",
+      "Loader"
+    ],
+    "answer": "Compiler",
+    "explanation": "Option A: Compiler"
   },
   {
     "id": "c_3",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the output of this loop?\n```c\nint sum = 0;\nfor (int i = 1; i <= 4; i++) {\n    sum += i;\n}\nprintf(\"%d\", sum);\n```",
-    "options": ["4", "6", "10", "15"],
-    "answer": "10",
-    "explanation": "sum = 1 + 2 + 3 + 4 = 10."
+    "section": "C Language",
+    "text": "The process of combining various object files and library functions into a single executable file in C is performed by the _______.",
+    "options": [
+      "Preprocessor",
+      "Compiler",
+      "Linker",
+      "Loader"
+    ],
+    "answer": "Linker",
+    "explanation": "Option C: Linker"
   },
   {
     "id": "c_4",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "Which of the following operators checks for equality between two variables in C?",
-    "options": ["=", "==", "===", "!="],
-    "answer": "==",
-    "explanation": "== is the relational operator for equality check in C."
+    "section": "C Language",
+    "text": "Before a C program is compiled, lines beginning with the # symbol (like #include) are processed by the __________.",
+    "options": [
+      "Interpreter",
+      "Linker",
+      "Preprocessor",
+      "Assembler"
+    ],
+    "answer": "Preprocessor",
+    "explanation": "Option C: Preprocessor"
   },
   {
     "id": "c_5",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What will be printed by the following code?\n```c\nint a = 17 % 5;\nprintf(\"%d\", a);\n```",
-    "answer": "2",
-    "explanation": "17 divided by 5 leaves a remainder of 2."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "A _________ produces an undesired output but without abrupt termination of the execution of the program.",
+    "options": [
+      "Syntax error",
+      "Logical error",
+      "Runtime error",
+      "Linker error"
+    ],
+    "answer": "Logical error",
+    "explanation": "Option B: Logical error"
   },
   {
     "id": "c_6",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will be the output of the following code?\n```c\nint count = 1;\nwhile (count < 4) {\n    count++;\n}\nprintf(\"%d\", count);\n```",
-    "options": ["3", "4", "5", "Infinite loop"],
-    "answer": "4",
-    "explanation": "Loop runs when count=1, 2, 3. Increments to 2, 3, 4. When count=4, condition count<4 becomes false, loop terminates and prints 4."
+    "section": "C Language",
+    "text": "A ___________ causes abnormal termination of the program while it is executing (for example, division by zero).",
+    "options": [
+      "Syntax error",
+      "Logical error",
+      "Runtime error",
+      "Semantic error"
+    ],
+    "answer": "Runtime error",
+    "explanation": "Option C: Runtime error"
   },
   {
     "id": "c_7",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "Complete the header file inclusion statement required for standard input/output functions like printf:\n`#include <_______>`",
-    "answer": "stdio.h",
-    "explanation": "stdio.h contains std input/output functions."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Missing a semicolon (;) at the end of a statement in C will result in a __________.",
+    "options": [
+      "Syntax error",
+      "Logical error",
+      "Runtime error",
+      "Linker error"
+    ],
+    "answer": "Syntax error",
+    "explanation": "Option A: Syntax error"
   },
   {
     "id": "c_8",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the value of `result` after execution?\n```c\nint a = 10, b = 3;\nint result = a / b;\n```",
-    "options": ["3", "3.33", "3.0", "4"],
-    "answer": "3",
-    "explanation": "Integer division truncates the decimal part in C. 10 / 3 = 3."
+    "section": "C Language",
+    "text": "The process of identifying and removing errors from a computer program is called _______.",
+    "options": [
+      "Debugging",
+      "Compiling",
+      "Linking",
+      "Executing"
+    ],
+    "answer": "Debugging",
+    "explanation": "Option A: Debugging"
   },
   {
     "id": "c_9",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What does the following code print?\n```c\nint year = 2024;\nif ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))\n    printf(\"LEAP\");\nelse\n    printf(\"NORMAL\");\n```",
-    "options": ["LEAP", "NORMAL", "2024", "Error"],
-    "answer": "LEAP",
-    "explanation": "2024 % 4 == 0 and 2024 % 100 != 0 is true, so it prints LEAP."
+    "section": "C Language",
+    "text": "Every C program must contain a _________ function, which acts as the starting point of execution.",
+    "options": [
+      "start()",
+      "main()",
+      "execute()",
+      "init()"
+    ],
+    "answer": "main()",
+    "explanation": "Option B: main()"
   },
   {
     "id": "c_10",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What is the exact output of this code snippet?\n```c\nint num = 8;\nif (num % 2 == 0)\n    printf(\"EVEN\");\nelse\n    printf(\"ODD\");\n```",
-    "answer": "EVEN",
-    "explanation": "8 % 2 == 0 is true, so EVEN is printed."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Comments in a C program (written as // or /* */) are __________.",
+    "options": [
+      "Non-executable statements",
+      "Executable statements",
+      "Processed by the linker",
+      "Converted into machine code"
+    ],
+    "answer": "Non-executable statements",
+    "explanation": "Option A: Non-executable statements"
   },
   {
     "id": "c_11",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will be the output of this code?\n```c\nint x = 5;\nint y = ++x;\nprintf(\"%d %d\", x, y);\n```",
-    "options": ["5 5", "5 6", "6 6", "6 5"],
-    "answer": "6 6",
-    "explanation": "++x is pre-increment: x becomes 6, and y is assigned 6."
+    "section": "C Language",
+    "text": "C uses __________ to define blocks of code (such as the body of a loop, if-statement, or function).",
+    "options": [
+      "Indentation",
+      "Parentheses ()",
+      "Curly braces {}",
+      "Square brackets []"
+    ],
+    "answer": "Curly braces {}",
+    "explanation": "Option C: Curly braces {}"
   },
   {
     "id": "c_12",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will be the output of this code?\n```c\nint x = 5;\nint y = x++;\nprintf(\"%d %d\", x, y);\n```",
-    "options": ["5 5", "6 5", "6 6", "5 6"],
-    "answer": "6 5",
-    "explanation": "x++ is post-increment: y receives initial value 5, then x becomes 6."
+    "section": "C Language",
+    "text": "__________ is a user-defined name given to a variable, function, or other entity in a program.",
+    "options": [
+      "Keyword",
+      "Identifier",
+      "Data type",
+      "Token"
+    ],
+    "answer": "Identifier",
+    "explanation": "Option B: Identifier"
   },
   {
     "id": "c_13",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What is the output of the code below?\n```c\nint units = 120;\nint bill = 0;\nif (units <= 100) {\n    bill = units * 2;\n} else {\n    bill = (100 * 2) + (units - 100) * 5;\n}\nprintf(\"%d\", bill);\n```",
-    "answer": "300",
-    "explanation": "units = 120 > 100. bill = 200 + (20 * 5) = 200 + 100 = 300."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Which of the following is NOT a valid fundamental data type in C?",
+    "options": [
+      "int",
+      "float",
+      "char",
+      "string"
+    ],
+    "answer": "string",
+    "explanation": "Option D: string"
   },
   {
     "id": "c_14",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "Which clause in a `switch` statement handles values that do not match any `case`?",
-    "options": ["else", "default", "otherwise", "finally"],
-    "answer": "default",
-    "explanation": "default: block executes if no case matches in a C switch statement."
+    "section": "C Language",
+    "text": "In C, variables whose values cannot be changed after they are initialized must be declared using the __________ keyword.",
+    "options": [
+      "constant",
+      "immutable",
+      "const",
+      "static"
+    ],
+    "answer": "const",
+    "explanation": "Option C: const"
   },
   {
     "id": "c_15",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What will be printed?\n```c\nint a = 3, b = 7;\nif (a > 5 || b > 5)\n    printf(\"MATCH\");\nelse\n    printf(\"NO MATCH\");\n```",
-    "answer": "MATCH",
-    "explanation": "a > 5 is false, but b > 5 (7 > 5) is true. Logical OR || evaluates to true."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "_________ in C is a data structure used to store a fixed-size sequential collection of elements of the same data type.",
+    "options": [
+      "Structure",
+      "Array",
+      "Pointer",
+      "Enum"
+    ],
+    "answer": "Array",
+    "explanation": "Option B: Array"
   },
   {
     "id": "c_16",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will happen during the execution of this code?\n```c\nint k = 1;\nwhile (k <= 5) {\n    printf(\"%d \", k);\n}\n```",
-    "options": ["Prints 1 to 5", "Prints 1 five times", "Infinite loop printing 1", "Compilation Error"],
-    "answer": "Infinite loop printing 1",
-    "explanation": "k is never updated inside the loop, remaining 1 forever."
+    "section": "C Language",
+    "text": "___________ in C is a user-defined data type that can hold multiple variables of different data types under a single name.",
+    "options": [
+      "Array",
+      "Structure",
+      "Pointer",
+      "Enum"
+    ],
+    "answer": "Structure",
+    "explanation": "Option B: Structure"
   },
   {
     "id": "c_17",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "Write the operator used to perform bitwise AND in C:",
-    "answer": "&",
-    "explanation": "& is the bitwise AND operator in C."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Which format specifier is used to print a standard decimal integer value in C?",
+    "options": [
+      "%d",
+      "%f",
+      "%c",
+      "%s"
+    ],
+    "answer": "%d",
+    "explanation": "Option A: %d"
   },
   {
     "id": "c_18",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the output of the following switch-case snippet?\n```c\nint ch = 2;\nswitch (ch) {\n    case 1: printf(\"A\"); break;\n    case 2: printf(\"B\");\n    case 3: printf(\"C\"); break;\n    default: printf(\"D\");\n}\n```",
-    "options": ["B", "BC", "BCD", "B break"],
-    "answer": "BC",
-    "explanation": "Case 2 matches and prints 'B'. Since there is no break statement in case 2, execution falls through to case 3, printing 'C'."
+    "section": "C Language",
+    "text": "What is the standard size of the char data type in C?",
+    "options": [
+      "1 byte",
+      "2 bytes",
+      "4 bytes",
+      "8 bytes"
+    ],
+    "answer": "1 byte",
+    "explanation": "Option A: 1 byte"
   },
   {
     "id": "c_19",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What will be printed by this code?\n```c\nint prod = 1;\nfor (int i = 1; i <= 3; i++) {\n    prod *= i;\n}\nprintf(\"%d\", prod);\n```",
-    "answer": "6",
-    "explanation": "1 * 1 * 2 * 3 = 6."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Which function is used to read formatted input from the standard input (keyboard) in C?",
+    "options": [
+      "printf()",
+      "scanf()",
+      "get()",
+      "read()"
+    ],
+    "answer": "scanf()",
+    "explanation": "Option B: scanf()"
   },
   {
     "id": "c_20",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the result of expression `10 + 5 * 2` in C?",
-    "options": ["30", "20", "25", "17"],
-    "answer": "20",
-    "explanation": "Multiplication has higher precedence than addition. 5 * 2 = 10; 10 + 10 = 20."
+    "section": "C Language",
+    "text": "Which unformatted console function is used to read a single character from the standard input?",
+    "options": [
+      "getchar()",
+      "putchar()",
+      "scanf()",
+      "printf()"
+    ],
+    "answer": "getchar()",
+    "explanation": "Option A: getchar()"
   },
   {
     "id": "c_21",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the output of the code?\n```c\nint x = 0;\nif (x = 5)\n    printf(\"TRUE\");\nelse\n    printf(\"FALSE\");\n```",
-    "options": ["FALSE", "TRUE", "Compilation Error", "0"],
-    "answer": "TRUE",
-    "explanation": "x = 5 is an assignment returning 5 (non-zero), which evaluates to boolean true in C."
+    "section": "C Language",
+    "text": "What does the modulus operator % yield?",
+    "options": [
+      "The quotient of integer division",
+      "The fractional part of float division",
+      "The remainder after integer division",
+      "The square root of a number"
+    ],
+    "answer": "The remainder after integer division",
+    "explanation": "Option C: The remainder after integer division"
   },
   {
     "id": "c_22",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What is the value of `val` printed?\n```c\nint val = (10 > 5) ? 100 : 200;\nprintf(\"%d\", val);\n```",
-    "answer": "100",
-    "explanation": "10 > 5 is true, so ternary operator returns 100."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Which operator has the highest precedence in C?",
+    "options": [
+      "||",
+      "&&",
+      "! (Logical NOT)",
+      "=="
+    ],
+    "answer": "! (Logical NOT)",
+    "explanation": "Option C: ! (Logical NOT)"
   },
   {
     "id": "c_23",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will be the output of this code?\n```c\nint i = 5;\nwhile (i > 0) {\n    i -= 2;\n}\nprintf(\"%d\", i);\n```",
-    "options": ["0", "-1", "1", "3"],
-    "answer": "-1",
-    "explanation": "i sequence: 5 -> 3 -> 1 -> -1. When i=-1, loop condition i>0 is false."
+    "section": "C Language",
+    "text": "What is the value of b after this code executes: int a = 0, b = 5; if (a && ++b) {}?",
+    "options": [
+      "4",
+      "5",
+      "6",
+      "0"
+    ],
+    "answer": "5",
+    "explanation": "Option B: 5"
   },
   {
     "id": "c_24",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What keyword is used to exit a loop immediately in C?",
-    "answer": "break",
-    "explanation": "break statement terminates the nearest loop."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What is the value of y after this code executes: int x = 1, y = 10; if (x || ++y) {}?",
+    "options": [
+      "9",
+      "10",
+      "11",
+      "1"
+    ],
+    "answer": "10",
+    "explanation": "Option B: 10"
   },
   {
     "id": "c_25",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the output of the following C code?\n```c\nint marks = 75;\nif (marks >= 80)\n    printf(\"A\");\nelse if (marks >= 70)\n    printf(\"B\");\nelse\n    printf(\"C\");\n```",
-    "options": ["A", "B", "C", "AB"],
-    "answer": "B",
-    "explanation": "75 >= 80 is false. 75 >= 70 is true, so B is printed."
+    "section": "C Language",
+    "text": "What does the expression 1 || 0 && 0 evaluate to in C?",
+    "options": [
+      "1 (True)",
+      "0 (False)",
+      "Compile Error",
+      "Garbage Value"
+    ],
+    "answer": "1 (True)",
+    "explanation": "Option A: 1 (True)"
   },
   {
     "id": "c_26",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What will be printed by `printf(\"%d\", !0);` in C?",
-    "answer": "1",
-    "explanation": "!0 inverts logical false (0) to logical true (1)."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What is the output of the expression 5 > 4 > 3 in C?",
+    "options": [
+      "1 (True)",
+      "0 (False)",
+      "Compile Error",
+      "Runtime Error"
+    ],
+    "answer": "0 (False)",
+    "explanation": "Option B: 0 (False)"
   },
   {
     "id": "c_27",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the correct syntax for declaring a variable named `score` to hold decimal value 98.5 in C?",
-    "options": ["int score = 98.5;", "float score = 98.5;", "number score = 98.5;", "val score = 98.5;"],
-    "answer": "float score = 98.5;",
-    "explanation": "float type is used to store floating-point single precision values."
+    "section": "C Language",
+    "text": "What is the exact integer output of the expression 10 + 5 * 2 % 3?",
+    "options": [
+      "10",
+      "11",
+      "15",
+      "0"
+    ],
+    "answer": "11",
+    "explanation": "Option B: 11"
   },
   {
     "id": "c_28",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What is printed by this loop?\n```c\nint count = 0;\nfor (int i = 0; i < 10; i += 3) {\n    count++;\n}\nprintf(\"%d\", count);\n```",
-    "answer": "4",
-    "explanation": "i values: 0, 3, 6, 9 (4 iterations). count becomes 4."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What does the expression !!5 evaluate to in C?",
+    "options": [
+      "0",
+      "1",
+      "5",
+      "-5"
+    ],
+    "answer": "1",
+    "explanation": "Option B: 1"
   },
   {
     "id": "c_29",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "Which of the following is NOT a valid variable name in C?",
-    "options": ["_score", "student2", "2student", "student_name"],
-    "answer": "2student",
-    "explanation": "Variable names in C cannot start with a digit."
+    "section": "C Language",
+    "text": "Which operator is used for Logical AND?",
+    "options": [
+      "&",
+      "&&",
+      "|",
+      "||"
+    ],
+    "answer": "&&",
+    "explanation": "Option B: &&"
   },
   {
     "id": "c_30",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What is the output of `printf(\"%d\", (5 == 5) && (3 > 10));`?",
-    "answer": "0",
-    "explanation": "(5 == 5) is true (1), but (3 > 10) is false (0). 1 && 0 is 0."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What is the output of the following code: int a = 5; if (a = 0) printf(\"Yes\"); else printf(\"No\");?",
+    "options": [
+      "Yes",
+      "No",
+      "Compile Error",
+      "Garbage Value"
+    ],
+    "answer": "No",
+    "explanation": "Option B: No"
   },
   {
     "id": "c_31",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will be printed by the following code?\n```c\nint a = 15;\nif (a % 3 == 0) {\n    if (a % 5 == 0)\n        printf(\"FIZZBUZZ\");\n    else\n        printf(\"FIZZ\");\n}\n```",
-    "options": ["FIZZ", "BUZZ", "FIZZBUZZ", "Nothing"],
-    "answer": "FIZZBUZZ",
-    "explanation": "15 is divisible by 3 and 5, so FIZZBUZZ is printed."
+    "section": "C Language",
+    "text": "How do you rewrite if (x > y) max = x; else max = y; using the conditional (ternary) operator?",
+    "options": [
+      "max = (x > y) ? x : y;",
+      "max = (x > y) : x ? y;",
+      "max = (x > y) ? y : x;",
+      "max = (x > y) & x : y;"
+    ],
+    "answer": "max = (x > y) ? x : y;",
+    "explanation": "Option A: max = (x > y) ? x : y;"
   },
   {
     "id": "c_32",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "Fill in the blank keyword used to skip the rest of the current loop iteration:\n`for (int i=0; i<5; i++) { if (i==2) _______; }`",
-    "answer": "continue",
-    "explanation": "continue statement skips to the next iteration."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Which operator is used for Bitwise OR?",
+    "options": [
+      "|",
+      "||",
+      "&",
+      "^"
+    ],
+    "answer": "|",
+    "explanation": "Option A: |"
   },
   {
     "id": "c_33",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the output of this code?\n```c\nint x = 4;\nswitch(x) {\n    case 1: printf(\"One\"); break;\n    case 4: printf(\"Four\"); break;\n    default: printf(\"None\");\n}\n```",
-    "options": ["One", "Four", "None", "FourNone"],
-    "answer": "Four",
-    "explanation": "case 4 matches and has a break statement."
+    "section": "C Language",
+    "text": "What is the value of x << 1 (Bitwise Left Shift) if x = 4?",
+    "options": [
+      "2",
+      "4",
+      "8",
+      "16"
+    ],
+    "answer": "8",
+    "explanation": "Option C: 8"
   },
   {
     "id": "c_34",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What will be printed?\n```c\nint x = 20, y = 30;\nint max = (x > y) ? x : y;\nprintf(\"%d\", max);\n```",
-    "answer": "30",
-    "explanation": "x > y (20 > 30) is false, so y (30) is selected."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What is the result of 2 & 3 (Bitwise AND) in C?",
+    "options": [
+      "1",
+      "2",
+      "3",
+      "5"
+    ],
+    "answer": "2",
+    "explanation": "Option B: 2"
   },
   {
     "id": "c_35",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the output of `printf(\"%d\", sizeof(char));` on standard systems?",
-    "options": ["1", "2", "4", "8"],
-    "answer": "1",
-    "explanation": "In C, sizeof(char) is defined to be exactly 1 byte."
+    "section": "C Language",
+    "text": "The comma operator , evaluates from left to right and returns the value of the ________ operand.",
+    "options": [
+      "Leftmost",
+      "Rightmost",
+      "Largest",
+      "Smallest"
+    ],
+    "answer": "Rightmost",
+    "explanation": "Option B: Rightmost"
   },
   {
     "id": "c_36",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What is the value of `i` after this loop finishes?\n```c\nint i;\nfor (i = 0; i < 5; i++) {\n    // do nothing\n}\n```",
-    "answer": "5",
-    "explanation": "i increments from 0 to 4 inside loop, then becomes 5 causing i < 5 to fail."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "For a leap year calculation, which conditional expression correctly isolates century years?",
+    "options": [
+      "year / 100 == 0",
+      "year % 100 == 0",
+      "year % 400 == 0",
+      "year / 400 == 0"
+    ],
+    "answer": "year % 100 == 0",
+    "explanation": "Option B: year % 100 == 0"
   },
   {
     "id": "c_37",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will be the output?\n```c\nint a = 5, b = 2;\nfloat c = a / b;\nprintf(\"%.1f\", c);\n```",
-    "options": ["2.5", "2.0", "2", "2.50"],
-    "answer": "2.0",
-    "explanation": "Integer division 5/2 gives 2. Converting 2 to float gives 2.0. %.1f prints 2.0."
+    "section": "C Language",
+    "text": "If x < 0 and y < 0, which logical operator should combine these to confirm the point is in the Third Quadrant?",
+    "options": [
+      "!",
+      "^",
+      "||",
+      "&&"
+    ],
+    "answer": "&&",
+    "explanation": "Option D: &&"
   },
   {
     "id": "c_38",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What will be printed?\n```c\nint sum = 0;\nint i = 1;\ndo {\n    sum += i;\n    i++;\n} while (i <= 3);\nprintf(\"%d\", sum);\n```",
-    "answer": "6",
-    "explanation": "sum = 1 + 2 + 3 = 6."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "In C, to which if does an else statement attach if there are no curly braces?",
+    "options": [
+      "The very first if",
+      "The nearest preceding if",
+      "It causes a syntax error",
+      "Both ifs"
+    ],
+    "answer": "The nearest preceding if",
+    "explanation": "Option B: The nearest preceding if"
   },
   {
     "id": "c_39",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What does the `%` (modulo) operator calculate in C?",
-    "options": ["Percentage", "Division quotient", "Remainder of division", "Exponentiation"],
-    "answer": "Remainder of division",
-    "explanation": "% operator yields the remainder after integer division."
+    "section": "C Language",
+    "text": "Which data type cannot be evaluated inside a C switch statement?",
+    "options": [
+      "int",
+      "char",
+      "float",
+      "short"
+    ],
+    "answer": "float",
+    "explanation": "Option C: float"
   },
   {
     "id": "c_40",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What is the output of `printf(\"%d\", 3 + 4 * 2 - 1);`?",
-    "answer": "10",
-    "explanation": "4 * 2 = 8; 3 + 8 = 11; 11 - 1 = 10."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "If case 1: lacks a break; statement, what happens when the variable equals 1?",
+    "options": [
+      "The program crashes",
+      "It skips the rest of the switch",
+      "It executes case 1 and falls through to execute the next case",
+      "It loops infinitely"
+    ],
+    "answer": "It executes case 1 and falls through to execute the next case",
+    "explanation": "Option C: It executes case 1 and falls through to execute the next case"
   },
   {
     "id": "c_41",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What is the result of `!(5 > 2)` in C?",
-    "options": ["1", "0", "true", "error"],
-    "answer": "0",
-    "explanation": "5 > 2 is true (1). !1 is false (0)."
+    "section": "C Language",
+    "text": "Is the default case mandatory in a switch statement?",
+    "options": [
+      "Yes, always",
+      "No, it is optional",
+      "Yes, but only for integers",
+      "No, unless break is omitted"
+    ],
+    "answer": "No, it is optional",
+    "explanation": "Option B: No, it is optional"
   },
   {
     "id": "c_42",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What will be printed by this code?\n```c\nint total = 0;\nfor (int i = 1; i <= 5; i++) {\n    if (i % 2 != 0)\n        total += i;\n}\nprintf(\"%d\", total);\n```",
-    "answer": "9",
-    "explanation": "Odds between 1 and 5 are 1, 3, 5. Total = 1 + 3 + 5 = 9."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What is the output of this code: int x = 10; if (1) { int x = 20; } printf(\"%d\", x);?",
+    "options": [
+      "10",
+      "20",
+      "30",
+      "Compile Error"
+    ],
+    "answer": "10",
+    "explanation": "Option A: 10"
   },
   {
     "id": "c_43",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "Which loop guarantees that the body of the loop executes AT LEAST ONCE?",
-    "options": ["for loop", "while loop", "do-while loop", "if statement"],
-    "answer": "do-while loop",
-    "explanation": "do-while checks its condition at the end of the loop body."
+    "section": "C Language",
+    "text": "What happens when if (5 > 3); printf(\"Hello\"); is executed?",
+    "options": [
+      "Prints Hello",
+      "Syntax Error",
+      "No output",
+      "Infinite Loop"
+    ],
+    "answer": "Prints Hello",
+    "explanation": "Option A: Prints Hello"
   },
   {
     "id": "c_44",
-    "type": "blank",
-    "section": "C Coding",
-    "text": "What is the output of `printf(\"%d\", 14 / 4);`?",
-    "answer": "3",
-    "explanation": "Integer division 14 / 4 = 3."
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Which conditional correctly guards against division by zero for z = x / y?",
+    "options": [
+      "if (y == 0)",
+      "if (y != 0)",
+      "if (y > 0)",
+      "if (x != 0)"
+    ],
+    "answer": "if (y != 0)",
+    "explanation": "Option B: if (y != 0)"
   },
   {
     "id": "c_45",
     "type": "mcq",
-    "section": "C Coding",
-    "text": "What will be the output of this code?\n```c\nint x = 10;\nif (x > 5)\n    printf(\"A\");\nif (x > 8)\n    printf(\"B\");\n```",
-    "options": ["A", "B", "AB", "Nothing"],
-    "answer": "AB",
-    "explanation": "Both if conditions are independent and true, so both 'A' and 'B' are printed."
+    "section": "C Language",
+    "text": "If an electricity bill slab applies $10 for units > 200 and $5 for units > 100, why must the > 200 condition be checked first in an if-else if ladder?",
+    "options": [
+      "Syntax rules require descending order",
+      "Checking > 100 first would accidentally catch values like 250",
+      "The C compiler optimizes larger numbers",
+      "It does not matter"
+    ],
+    "answer": "Checking > 100 first would accidentally catch values like 250",
+    "explanation": "Option B: Checking > 100 first would accidentally catch values like 250"
+  },
+  {
+    "id": "c_46",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What are the three components of a for loop declaration separated by?",
+    "options": [
+      "Commas ,",
+      "Semicolons ;",
+      "Colons :",
+      "Spaces"
+    ],
+    "answer": "Semicolons ;",
+    "explanation": "Option B: Semicolons ;"
+  },
+  {
+    "id": "c_47",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "A do-while loop is guaranteed to execute its block of code at least how many times?",
+    "options": [
+      "0",
+      "1",
+      "2",
+      "Depends on the condition"
+    ],
+    "answer": "1",
+    "explanation": "Option B: 1"
+  },
+  {
+    "id": "c_48",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What does the break statement do inside a loop?",
+    "options": [
+      "Restarts the loop",
+      "Skips the current iteration",
+      "Immediately terminates the loop",
+      "Pauses execution"
+    ],
+    "answer": "Immediately terminates the loop",
+    "explanation": "Option C: Immediately terminates the loop"
+  },
+  {
+    "id": "c_49",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What does the continue statement do inside a loop?",
+    "options": [
+      "Terminates the program",
+      "Terminates the loop",
+      "Skips the remaining code in the current iteration and moves to the next iteration",
+      "Ignores all future errors"
+    ],
+    "answer": "Skips the remaining code in the current iteration and moves to the next iteration",
+    "explanation": "Option C: Skips the remaining code in the current iteration and moves to the next iteration"
+  },
+  {
+    "id": "c_50",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Which of the following creates an infinite loop in C?",
+    "options": [
+      "for(;;)",
+      "while(1)",
+      "do {} while(1);",
+      "All of the above"
+    ],
+    "answer": "All of the above",
+    "explanation": "Option D: All of the above"
+  },
+  {
+    "id": "c_51",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Given int x = 0; while (x++ < 3) {}, what is the value of x when the loop finally terminates?",
+    "options": [
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "answer": "4",
+    "explanation": "Option C: 4"
+  },
+  {
+    "id": "c_52",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What is the exact output of this code: int a = 1; printf(\"%d\", ++a);?",
+    "options": [
+      "1",
+      "2",
+      "3",
+      "Compile Error"
+    ],
+    "answer": "2",
+    "explanation": "Option B: 2"
+  },
+  {
+    "id": "c_53",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "If int i = 0; is declared inside the parentheses of a for loop in C99, can it be accessed outside the loop block?",
+    "options": [
+      "Yes",
+      "No",
+      "Only if it's an infinite loop",
+      "Yes, but only as a read-only variable"
+    ],
+    "answer": "No",
+    "explanation": "Option B: No"
+  },
+  {
+    "id": "c_54",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What happens if you forget to increment the counter variable inside a while loop that relies on it to terminate?",
+    "options": [
+      "Compile Error",
+      "Syntax Error",
+      "Infinite Loop",
+      "Loop skips entirely"
+    ],
+    "answer": "Infinite Loop",
+    "explanation": "Option C: Infinite Loop"
+  },
+  {
+    "id": "c_55",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "In C, any non-zero integer evaluated in a loop condition is treated as what boolean concept?",
+    "options": [
+      "False",
+      "True",
+      "Null",
+      "Void"
+    ],
+    "answer": "True",
+    "explanation": "Option B: True"
+  },
+  {
+    "id": "c_56",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What does this loop print? for(int i=1; i<=4; i++) { if(i%2==0) printf(\"%d\", i); }",
+    "options": [
+      "24",
+      "13",
+      "1234",
+      "024"
+    ],
+    "answer": "24",
+    "explanation": "Option A: 24"
+  },
+  {
+    "id": "c_57",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "How many times will int i = 3; while(i > 0) { i--; } execute its body?",
+    "options": [
+      "2",
+      "4",
+      "3",
+      "0"
+    ],
+    "answer": "3",
+    "explanation": "Option C: 3"
+  },
+  {
+    "id": "c_58",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What is the final value of sum? int sum=0; for(int i=1; i<=3; i++) { sum = sum + i; }",
+    "options": [
+      "6",
+      "3",
+      "5",
+      "10"
+    ],
+    "answer": "6",
+    "explanation": "Option A: 6"
+  },
+  {
+    "id": "c_59",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "Is for (int i = 0, j = 10; i < j; i++, j--) a valid C statement?",
+    "options": [
+      "Yes",
+      "No",
+      "Only in C++",
+      "Throws a syntax error"
+    ],
+    "answer": "Yes",
+    "explanation": "Option A: Yes"
+  },
+  {
+    "id": "c_60",
+    "type": "mcq",
+    "section": "C Language",
+    "text": "What happens here: int i; for(i=0; i<3; i++); printf(\"%d\", i);?",
+    "options": [
+      "Prints 012",
+      "Prints 0123",
+      "Prints 3",
+      "Compile Error"
+    ],
+    "answer": "Prints 3",
+    "explanation": "Option C: Prints 3"
   }
 ]

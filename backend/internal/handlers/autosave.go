@@ -174,17 +174,6 @@ func loadAnswerKey(dataPath, track string) map[string]string {
 
 	answerKey := map[string]string{}
 
-	if aptBytes, err := os.ReadFile(filepath.Join(dataPath, "questions_aptitude.json")); err == nil {
-		var aptitudeQuestions []models.Question
-		if json.Unmarshal(aptBytes, &aptitudeQuestions) == nil {
-			for _, q := range aptitudeQuestions {
-				answerKey[q.ID] = q.Answer
-			}
-		}
-	} else {
-		log.Printf("[ANSWERKEY] Could not read aptitude bank from %s: %v", dataPath, err)
-	}
-
 	codeFile := "questions_c.json"
 	if strings.ToLower(track) == "python" {
 		codeFile = "questions_python.json"

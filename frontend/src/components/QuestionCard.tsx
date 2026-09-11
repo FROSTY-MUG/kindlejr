@@ -1,6 +1,5 @@
 import React from "react";
 import { Question } from "../services/api";
-import { HelpCircle, Edit3 } from "lucide-react";
 
 interface QuestionCardProps {
   question: Question;
@@ -17,92 +16,78 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   userAnswer,
   onAnswerChange,
 }) => {
+  const options = question.options || [];
+
   return (
-    <div className="bg-slate-900/60 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 p-6 sm:p-8 relative">
+    <div className="bg-white/95 backdrop-blur-2xl rounded-2xl shadow-xl border-2 border-slate-200 p-6 sm:p-8 relative transition-all">
       {/* Header Info */}
-      <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
-        <div className="flex items-center space-x-2">
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">
-            {question.section}
+      <div className="flex items-center justify-between pb-4 mb-6 border-b-2 border-slate-100">
+        <div className="flex items-center space-x-3">
+          <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            {question.section || "Technical MCQ"}
           </span>
-          <span className="text-xs text-slate-400 font-semibold font-mono">
+          <span className="text-xs text-slate-500 font-bold font-mono">
             Question {questionIndex + 1} of {totalQuestions}
           </span>
         </div>
 
-        <span className="text-xs font-semibold font-mono px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-          1 Mark
+        <span className="text-xs font-bold font-mono px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+          +1.0 Mark
         </span>
       </div>
 
       {/* Question Text */}
-      <div className="mb-6">
-        <h3 className="text-base sm:text-lg font-semibold text-slate-100 whitespace-pre-wrap leading-relaxed">
+      <div className="mb-8">
+        <h3 className="text-base sm:text-lg font-bold text-slate-900 whitespace-pre-wrap leading-relaxed tracking-tight">
           {question.text}
         </h3>
       </div>
 
-      {/* Answer Options */}
-      {question.type === "mcq" && question.options ? (
-        <div className="space-y-3">
-          {question.options.map((opt, idx) => {
-            const isSelected = userAnswer === opt;
-            const letter = String.fromCharCode(65 + idx); // A, B, C, D
+      {/* MCQ Answer Options */}
+      <div className="space-y-3.5">
+        {options.map((opt, idx) => {
+          const letter = String.fromCharCode(65 + idx); // A, B, C, D
+          const isSelected =
+            userAnswer === opt ||
+            userAnswer.toLowerCase() === letter.toLowerCase();
 
-            return (
-              <div
-                key={idx}
-                onClick={() => onAnswerChange(opt)}
-                className={`cursor-pointer rounded-xl border p-4 transition-all flex items-center justify-between ${
-                  isSelected
-                    ? "border-amber-500/80 bg-amber-500/10 text-amber-300 shadow-md ring-1 ring-amber-500/40"
-                    : "border-white/10 bg-slate-900/40 text-slate-200 hover:border-white/20 hover:bg-slate-800/50"
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <span
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold font-mono text-xs ${
-                      isSelected
-                        ? "bg-amber-500 text-slate-950"
-                        : "bg-slate-800 text-slate-400 border border-white/10"
-                    }`}
-                  >
-                    {letter}
-                  </span>
-                  <span className="text-sm font-medium">{opt}</span>
-                </div>
-
-                <div
-                  className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                    isSelected ? "border-amber-500 bg-amber-500" : "border-white/20"
+          return (
+            <div
+              key={idx}
+              onClick={() => onAnswerChange(opt)}
+              className={`cursor-pointer rounded-2xl border-2 p-4 sm:p-5 transition-all flex items-center justify-between select-none ${
+                isSelected
+                  ? "border-blue-600 bg-blue-50/80 text-blue-950 shadow-md ring-2 ring-blue-600/20 font-semibold"
+                  : "border-slate-200 bg-slate-50/60 text-slate-800 hover:border-blue-300 hover:bg-slate-100/80 font-medium"
+              }`}
+            >
+              <div className="flex items-center space-x-3.5">
+                <span
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center font-black font-mono text-xs transition-all ${
+                    isSelected
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-white text-slate-600 border-2 border-slate-200"
                   }`}
                 >
-                  {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
-                </div>
+                  {letter}
+                </span>
+                <span className="text-sm sm:text-base leading-snug">{opt}</span>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* Fill-in-the-blank Typing Input */
-        <div className="mt-4">
-          <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <Edit3 className="w-4 h-4 text-amber-400" />
-            Type Your Answer Below:
-          </label>
-          <input
-            type="text"
-            placeholder="Type your response here..."
-            value={userAnswer || ""}
-            onChange={(e) => onAnswerChange(e.target.value)}
-            className="w-full p-4 bg-slate-900/80 border border-white/10 rounded-xl text-amber-300 font-mono text-sm focus:outline-none focus:border-amber-500 transition-all shadow-inner"
-          />
-          <p className="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
-            <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-            Flexible answer checking applied (case, spacing, and numbers like "3" vs "three" handled automatically).
-          </p>
-        </div>
-      )}
+
+              {/* Radio Indicator */}
+              <div
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                  isSelected
+                    ? "border-blue-600 bg-blue-600"
+                    : "border-slate-300 bg-white"
+                }`}
+              >
+                {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

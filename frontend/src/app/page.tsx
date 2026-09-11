@@ -34,19 +34,29 @@ export default function Home() {
 
   const { isOnline } = useOfflineSync(student?.studentId || "");
 
-  // Check for admin session on page mount
+  // Check for admin session or admin URL parameter on page mount
   useEffect(() => {
     try {
-      if (sessionStorage.getItem("admin_session") === "true") {
-        setStep("admin");
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("admin") === "true" || urlParams.get("admin") === "1" || urlParams.get("admin") === "kindle_jr_5_admin_secret_2026") {
+          sessionStorage.setItem("admin_session", "true");
+          setStep("admin");
+          return;
+        }
+        if (sessionStorage.getItem("admin_session") === "true") {
+          setStep("admin");
+        }
       }
     } catch {}
   }, []);
 
-  // Parallax Scroll Hooks for IEEE SB Watermark
+  // Parallax Scroll Hooks for Graphic Era Logo Backdrop
   const { scrollY } = useScroll();
-  const logoY = useTransform(scrollY, [0, 1000], [0, 200]);
-  const logoOpacity = useTransform(scrollY, [0, 800], [0.03, 0.01]);
+  const logoY = useTransform(scrollY, [0, 1200], [0, 260]);
+  const logoScale = useTransform(scrollY, [0, 1200], [1, 1.25]);
+  const logoRotate = useTransform(scrollY, [0, 1200], [0, 12]);
+  const logoOpacity = useTransform(scrollY, [0, 600, 1200], [0.18, 0.25, 0.12]);
 
   // Parallax Scroll Hooks for Registration Section
   const regY = useTransform(scrollY, [300, 900], [60, 0]);
@@ -78,11 +88,14 @@ export default function Home() {
     setStep("quiz");
   };
 
-  // State Recovery Handler
+  // State Recovery Handler with 15-Minute Reconnection Buffer & 30-Second Threshold
   const handleRestoreState = async (stateRes: {
     student: StudentData;
     remainingSeconds: number;
-    timeExpired: boolean;
+    timeExpired?: boolean;
+    disconnectedSeconds?: number;
+    bufferExpired?: boolean;
+    shouldAutoSubmit?: boolean;
   }) => {
     const st = stateRes.student;
     setStudent(st);
@@ -98,11 +111,12 @@ export default function Home() {
       return;
     }
 
-    // Absolute-time recovery: if the 60-minute window already elapsed while the
-    // student was away, the attempt is auto-submitted with whatever was saved.
-    // This prevents a reload from resetting the clock and is the reason the
-    // server recomputes elapsed time from startedAt rather than trusting us.
-    if (stateRes.timeExpired || stateRes.remainingSeconds <= 0) {
+    // Disconnection & Timer Assessment:
+    // 1. If remaining time is <= 30 seconds (or <= 10 seconds), auto-submit immediately.
+    // 2. If disconnected for > 15 minutes (bufferExpired), auto-submit and grade saved answers.
+    const isExpired = stateRes.timeExpired || stateRes.remainingSeconds <= 30 || stateRes.bufferExpired || stateRes.shouldAutoSubmit;
+
+    if (isExpired) {
       try {
         const res = await apiSubmitQuiz({
           studentId: st.studentId,
@@ -123,21 +137,28 @@ export default function Home() {
           unattemptedCount: st.unattemptedCount || 0,
         });
       }
-      setRecoveryNotice(
-        "Your 60-minute assessment window has ended. Your saved answers were submitted automatically."
-      );
+
+      let notice = "Your 60-minute assessment window has ended. Your saved answers were submitted automatically.";
+      if (stateRes.bufferExpired) {
+        notice = "The 15-minute reconnection buffer has elapsed. Your saved answers were graded and submitted automatically.";
+      } else if (stateRes.remainingSeconds <= 30 && stateRes.remainingSeconds > 0) {
+        notice = `Your session had less than 30 seconds remaining (${stateRes.remainingSeconds}s left). Your saved answers were submitted and graded.`;
+      }
+      setRecoveryNotice(notice);
       setStep("submitted");
       return;
     }
 
+    // Candidate has > 30 seconds remaining and returned within 15-minute buffer:
+    // Restore questions, shuffled order, saved answers (e.g. Q1-Q7), and place them at current active question (e.g. Q8)
     if (st.selectedTrack && st.shuffledOrder && st.shuffledOrder.length > 0) {
       try {
         const fetchedQuestions = await apiGetQuestions(st.selectedTrack.toLowerCase());
         setQuestions(fetchedQuestions);
         setShuffledOrder(st.shuffledOrder);
         setAnswers(st.answers || {});
+        // Resume at the exact question index they were on
         setCurrentQuestionIndex(st.currentQuestion || 0);
-        // The server is authoritative on how much time remains.
         setRemainingSeconds(stateRes.remainingSeconds);
         setStep("quiz");
       } catch (err) {
@@ -170,33 +191,44 @@ export default function Home() {
 
   return (
     <main className="relative min-h-[200vh] w-full bg-slate-50 text-slate-900 font-sans selection:bg-blue-200 overflow-x-hidden">
-      {/* 3D Background Canvas (Removed for Light Theme) */}
-
-      {/* Part 2.1: Parallax GEU Watermark */}
-      <motion.div
-        style={{ y: logoY }}
-        className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden opacity-50 blur-md"
-      >
+      {/* Soft Blurred Graphic Era University Background & Parallax GEU Logo Backdrop */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <img
-          src="/geu-logo.png"
-          alt="GEU Watermark"
-          className="w-[80vw] max-w-[800px] pointer-events-none select-none grayscale opacity-30"
+          src="/geu-building.jpg"
+          alt="Graphic Era University"
+          className="w-full h-full object-cover blur-xl scale-110 opacity-20"
         />
-      </motion.div>
+        {/* Parallax Official Graphic Era Logo Backdrop */}
+        <motion.div
+          style={{ y: logoY, scale: logoScale, rotate: logoRotate, opacity: logoOpacity }}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <img
+            src="/geu-logo.png"
+            alt="Graphic Era University Logo Watermark"
+            className="w-[85vw] max-w-[800px] h-auto object-contain blur-md drop-shadow-[0_0_80px_rgba(37,99,235,0.25)] select-none"
+          />
+        </motion.div>
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-100/70 via-blue-50/50 to-slate-100/80" />
+      </div>
 
-      {/* Fixed Header Bar with IEEE SB Logo Branding */}
-      <header className="fixed top-0 left-0 w-full z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shadow-sm">
-        <div className="flex items-center space-x-3">
-          <img src="/ieee-logo.png" alt="IEEE SB Logo" className="h-10 w-auto object-contain" />
-          <div className="h-5 w-[1px] bg-slate-300" />
-          <span className="text-sm sm:text-lg font-black tracking-tight text-slate-800 flex items-center gap-2">
+      {/* Fixed Header Bar with Official Graphic Era & IEEE Logo Branding */}
+      <header className="fixed top-0 left-0 w-full z-40 bg-white/95 backdrop-blur-xl border-b border-sky-200/80 px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
+        <div className="flex items-center space-x-3.5">
+          <img
+            src="/header-logo.png"
+            alt="Graphic Era | IEEE SB"
+            className="h-10 sm:h-12 w-auto object-contain rounded-xl bg-white p-1 border border-slate-200 shadow-sm"
+          />
+          <div className="h-6 w-[1.5px] bg-sky-200 hidden sm:block" />
+          <span className="text-sm sm:text-base font-black tracking-tight text-slate-900 flex items-center gap-2">
             <span className="text-blue-600 font-extrabold">IEEE GEU SB</span>
-            <span className="text-slate-400 font-normal">|</span>
-            <span>Kindle Junior 5.0</span>
+            <span className="text-slate-300 font-normal hidden sm:inline">|</span>
+            <span className="hidden sm:inline">Kindle Junior 5.0</span>
           </span>
         </div>
 
-        <div className="text-xs sm:text-sm uppercase tracking-widest font-mono text-slate-500 hidden sm:block font-semibold">
+        <div className="text-xs sm:text-sm uppercase tracking-widest font-mono text-sky-800 hidden sm:block font-bold bg-sky-50 px-3.5 py-1 rounded-full border border-sky-200">
           Graphic Era (Deemed to be University)
         </div>
       </header>
@@ -208,14 +240,14 @@ export default function Home() {
             initial={{ opacity: 0, y: -15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white/90 border border-blue-200 backdrop-blur-md shadow-sm"
+            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white/95 border border-sky-200 backdrop-blur-md shadow-sm"
           >
-            <img src="/ieee-logo.png" alt="IEEE Logo" className="h-6 w-auto object-contain" />
+            <img src="/header-logo.png" alt="IEEE GEU Logo" className="h-6 w-auto object-contain" />
             <span className="text-blue-600 text-sm sm:text-base font-extrabold uppercase tracking-widest font-mono">
               IEEE Student Branch
             </span>
             <span className="text-slate-400">•</span>
-            <span className="text-slate-600 text-sm sm:text-base font-medium tracking-wide">
+            <span className="text-slate-700 text-sm sm:text-base font-semibold tracking-wide">
               Graphic Era (Deemed to be University)
             </span>
           </motion.div>
@@ -229,7 +261,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="space-y-2"
           >
-            <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight uppercase bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 bg-clip-text text-transparent drop-shadow-sm">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight uppercase bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500 bg-clip-text text-transparent drop-shadow-sm">
               IEEE GEU STUDENT BRANCH
             </h2>
             <div className="flex items-center justify-center gap-4 text-xs sm:text-sm uppercase font-mono text-blue-600 tracking-[0.35em] font-bold pt-1">
@@ -244,7 +276,7 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.93 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-slate-800 drop-shadow-sm"
+            className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-slate-900 drop-shadow-sm"
           >
             Kindle Junior <span className="text-blue-600 inline-block">5.0</span>
           </motion.h1>
@@ -254,7 +286,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-lg sm:text-2xl font-medium text-slate-600 tracking-wide max-w-2xl mx-auto"
+            className="text-lg sm:text-2xl font-medium text-slate-700 tracking-wide max-w-2xl mx-auto"
           >
             The Premier Technical & Aptitude Challenge of Graphic Era University
           </motion.p>

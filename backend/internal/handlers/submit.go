@@ -87,51 +87,50 @@ func SubmitQuiz(store *db.Store, dataPath string) http.HandlerFunc {
 			student.Answers[qID] = ans
 		}
 
-		// Load ground truth questions
-		aptBytes, err := os.ReadFile(filepath.Join(dataPath, "questions_aptitude.json"))
-		if err != nil {
-			http.Error(w, "Error reading aptitude answer key", http.StatusInternalServerError)
-			return
-		}
-
-		var aptitudeQuestions []models.Question
-		_ = json.Unmarshal(aptBytes, &aptitudeQuestions)
-
+		// Load ground truth questions for selected track
 		codeFile := "questions_c.json"
 		if strings.ToLower(student.SelectedTrack) == "python" {
 			codeFile = "questions_python.json"
 		}
 		codeBytes, err := os.ReadFile(filepath.Join(dataPath, codeFile))
 		if err != nil {
-			http.Error(w, "Error reading coding answer key", http.StatusInternalServerError)
+			http.Error(w, "Error reading answer key", http.StatusInternalServerError)
 			return
 		}
 
-		var codingQuestions []models.Question
-		_ = json.Unmarshal(codeBytes, &codingQuestions)
-
-		answerKey := make(map[string]string)
-		for _, q := range aptitudeQuestions {
-			answerKey[q.ID] = q.Answer
-		}
-		for _, q := range codingQuestions {
-			answerKey[q.ID] = q.Answer
-		}
+		var trackQuestions []models.Question
+		_ = json.Unmarshal(codeBytes, &trackQuestions)
 
 		correctCount := 0
 		incorrectCount := 0
 		unattemptedCount := 0
 
-		for qID, correctAns := range answerKey {
-			userAns, exists := student.Answers[qID]
+		for _, q := range trackQuestions {
+			userAns, exists := student.Answers[q.ID]
 			if !exists || strings.TrimSpace(userAns) == "" {
 				unattemptedCount++
 				continue
 			}
 
 			cleanUser := utils.NormalizeAnswer(userAns)
-			cleanCorrect := utils.NormalizeAnswer(correctAns)
-			if cleanUser != "" && cleanUser == cleanCorrect {
+			cleanCorrect := utils.NormalizeAnswer(q.Answer)
+
+			isCorrect := cleanUser != "" && cleanUser == cleanCorrect
+
+			// Fallback: check if user submitted the option letter (A, B, C, D)
+			if !isCorrect && len(q.Options) > 0 {
+				for optIdx, optVal := range q.Options {
+					if utils.NormalizeAnswer(optVal) == cleanCorrect {
+						optLetter := strings.ToLower(string(rune('a' + optIdx)))
+						if cleanUser == optLetter || cleanUser == optLetter+")" || cleanUser == optLetter+"." || cleanUser == "option "+optLetter {
+							isCorrect = true
+						}
+						break
+					}
+				}
+			}
+
+			if isCorrect {
 				correctCount++
 			} else {
 				incorrectCount++

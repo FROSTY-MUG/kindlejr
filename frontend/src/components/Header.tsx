@@ -17,21 +17,22 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-        {/* GEU & IEEE Branding */}
+        {/* GEU & IEEE Official Branding Logo */}
         <div className="flex items-center space-x-3">
-          {/* GEU Crest / Logo Badge */}
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-800 text-white font-black text-sm shadow-md ring-2 ring-blue-100">
-            GEU
-          </div>
+          <img
+            src="/header-logo.png"
+            alt="Graphic Era | IEEE SB"
+            className="h-11 sm:h-12 w-auto object-contain rounded-xl bg-white/95 p-1 border border-slate-200/80 shadow-sm"
+          />
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-none">
-                Graphic Era <span className="text-xs font-medium text-slate-500 hidden sm:inline">(Deemed to be University)</span>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none">
+                Graphic Era <span className="text-xs font-semibold text-slate-500 hidden sm:inline">(Deemed to be University)</span>
               </h1>
             </div>
-            <p className="text-xs font-semibold text-blue-600 flex items-center gap-1 mt-0.5">
+            <p className="text-xs font-bold text-blue-600 flex items-center gap-1 mt-0.5">
               <Zap className="w-3.5 h-3.5 fill-current text-amber-500" />
-              Kindle Jr 5.0 <span className="text-slate-400 font-normal">by IEEE GEU SB</span>
+              Kindle Jr 5.0 <span className="text-slate-400 font-medium">| IEEE GEU SB</span>
             </p>
           </div>
         </div>

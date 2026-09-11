@@ -7,51 +7,81 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"kindle-jr/internal/models"
 )
 
-// GetQuestions returns the full 60 question bank (15 Aptitude + 45 Coding) for a track.
+var (
+	cacheMu     sync.RWMutex
+	cachedTrack = make(map[string][]models.Question)
+)
+
+// GetSanitizedQuestions loads questions from in-memory cache and returns client-safe questions with answers stripped.
+func getSanitizedQuestions(dataPath, track string) ([]models.Question, error) {
+	cacheMu.RLock()
+	if list, exists := cachedTrack[track]; exists {
+		cacheMu.RUnlock()
+		return list, nil
+	}
+	cacheMu.RUnlock()
+
+	cacheMu.Lock()
+	defer cacheMu.Unlock()
+
+	// Double-check under write lock
+	if list, exists := cachedTrack[track]; exists {
+		return list, nil
+	}
+
+	codeFilename := "questions_c.json"
+	if track == "python" {
+		codeFilename = "questions_python.json"
+	}
+	codeFile := filepath.Join(dataPath, codeFilename)
+	codeBytes, err := os.ReadFile(codeFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load questions for track %s: %w", track, err)
+	}
+
+	var rawQuestions []models.Question
+	if err := json.Unmarshal(codeBytes, &rawQuestions); err != nil {
+		return nil, fmt.Errorf("failed to parse questions: %w", err)
+	}
+
+	// Strip answer and explanation for anti-cheat protection
+	sanitized := make([]models.Question, len(rawQuestions))
+	for i, q := range rawQuestions {
+		sanitized[i] = models.Question{
+			ID:      q.ID,
+			Type:    q.Type,
+			Section: q.Section,
+			Text:    q.Text,
+			Options: q.Options,
+		}
+	}
+
+	cachedTrack[track] = sanitized
+	return sanitized, nil
+}
+
+// GetQuestions returns the full 60 question bank for a track with answers 100% stripped.
 func GetQuestions(dataPath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		track := strings.ToLower(vars["track"])
 
-		aptFile := filepath.Join(dataPath, "questions_aptitude.json")
-		aptBytes, err := os.ReadFile(aptFile)
+		questions, err := getSanitizedQuestions(dataPath, track)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to load aptitude questions: %v", err), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		var aptitudeQuestions []models.Question
-		if err := json.Unmarshal(aptBytes, &aptitudeQuestions); err != nil {
-			http.Error(w, "Failed to parse aptitude questions", http.StatusInternalServerError)
-			return
-		}
-
-		codeFilename := "questions_c.json"
-		if track == "python" {
-			codeFilename = "questions_python.json"
-		}
-		codeFile := filepath.Join(dataPath, codeFilename)
-		codeBytes, err := os.ReadFile(codeFile)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to load coding questions for track %s: %v", track, err), http.StatusInternalServerError)
-			return
-		}
-
-		var codingQuestions []models.Question
-		if err := json.Unmarshal(codeBytes, &codingQuestions); err != nil {
-			http.Error(w, "Failed to parse coding questions", http.StatusInternalServerError)
-			return
-		}
-
-		allQuestions := append(aptitudeQuestions, codingQuestions...)
 
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "public, max-age=3600")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(allQuestions)
+		_ = json.NewEncoder(w).Encode(questions)
 	}
 }
+

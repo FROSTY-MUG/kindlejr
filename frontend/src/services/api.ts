@@ -1,6 +1,14 @@
 import { getFallbackQuestions } from "../data/fallbackQuestions";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+const resolveBaseUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && !envUrl.includes("up.railway.app") && !envUrl.includes("localhost")) {
+    return envUrl;
+  }
+  return "/api";
+};
+
+const BASE_URL = resolveBaseUrl();
 
 // Single source of truth for the exam duration. The backend uses the identical
 // value (3600s) in handlers/get_state.go, so the countdown, the local recovery

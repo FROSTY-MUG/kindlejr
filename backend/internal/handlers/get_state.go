@@ -11,12 +11,15 @@ import (
 )
 
 type StateResponse struct {
-	Student          *models.StudentState `json:"student"`
-	RemainingSeconds int                  `json:"remainingSeconds"`
-	TimeExpired      bool                 `json:"timeExpired"`
+	Student             *models.StudentState `json:"student"`
+	RemainingSeconds    int                  `json:"remainingSeconds"`
+	TimeExpired         bool                 `json:"timeExpired"`
+	DisconnectedSeconds int                  `json:"disconnectedSeconds"`
+	BufferExpired       bool                 `json:"bufferExpired"`
+	ShouldAutoSubmit    bool                 `json:"shouldAutoSubmit"`
 }
 
-// GetState fetches current quiz state and calculates exact remaining timer duration.
+// GetState fetches current quiz state and calculates exact remaining timer duration and reconnection buffer.
 func GetState(store *db.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -39,20 +42,43 @@ func GetState(store *db.Store) http.HandlerFunc {
 
 		remainingSeconds := 3600 // 60 minutes default
 		timeExpired := false
+		disconnectedSeconds := 0
+		bufferExpired := false
+		shouldAutoSubmit := false
+
+		now := time.Now().UTC()
 
 		if student.StartedAt != nil {
-			elapsed := time.Now().UTC().Sub(*student.StartedAt).Seconds()
+			elapsed := now.Sub(*student.StartedAt).Seconds()
 			remainingSeconds = 3600 - int(elapsed)
+
+			// Calculate time since last activity
+			if !student.UpdatedAt.IsZero() {
+				disconnectedSeconds = int(now.Sub(student.UpdatedAt).Seconds())
+				// 15-minute reconnection buffer (900 seconds)
+				if disconnectedSeconds > 900 && !student.IsSubmitted {
+					bufferExpired = true
+				}
+			}
+
 			if remainingSeconds <= 0 {
 				remainingSeconds = 0
 				timeExpired = true
 			}
+
+			// If time remaining is <= 30 seconds or 15m buffer exceeded, force auto-submit
+			if timeExpired || remainingSeconds <= 30 || bufferExpired {
+				shouldAutoSubmit = true
+			}
 		}
 
 		resp := StateResponse{
-			Student:          student,
-			RemainingSeconds: remainingSeconds,
-			TimeExpired:      timeExpired,
+			Student:             student,
+			RemainingSeconds:    remainingSeconds,
+			TimeExpired:         timeExpired,
+			DisconnectedSeconds: disconnectedSeconds,
+			BufferExpired:       bufferExpired,
+			ShouldAutoSubmit:    shouldAutoSubmit,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

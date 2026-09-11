@@ -79,14 +79,18 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    formData.collegeEmail.trim()
+  );
+
   const isFormValid =
     formData.name.trim() !== "" &&
     formData.studentId.trim() !== "" &&
     formData.enrollmentNum.trim() !== "" &&
-    formData.collegeEmail.trim() !== "" &&
+    isEmailValid &&
     (formData.courseSelection !== "Other" || formData.customCourse.trim() !== "");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
 
@@ -107,6 +111,18 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
         onAdminTrigger();
         return;
       }
+    }
+
+    // Auto-detect existing started quiz or submitted quiz to resume seamlessly
+    try {
+      setIsLookupLoading(true);
+      const existing = await apiGetState(sId);
+      if (existing && existing.student && (existing.student.startedAt || existing.student.isSubmitted)) {
+        onRestoreState(existing);
+        return;
+      }
+    } catch {} finally {
+      setIsLookupLoading(false);
     }
 
     onComplete({
@@ -223,8 +239,17 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
         {/* College Email */}
         <div>
-          <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">
-            College Email *
+          <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span>College Email *</span>
+            {formData.collegeEmail.trim() && (
+              <span
+                className={`text-xs font-semibold ${
+                  isEmailValid ? "text-emerald-600 font-mono" : "text-amber-600"
+                }`}
+              >
+                {isEmailValid ? "✓ Valid Email" : "Enter a valid email address"}
+              </span>
+            )}
           </label>
           <div className="relative">
             <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-4" />
@@ -235,7 +260,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               placeholder="rahul.2024@geu.ac.in"
               value={formData.collegeEmail}
               onChange={handleChange}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 text-lg font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              className={`w-full pl-12 pr-4 py-4 bg-slate-50 border-2 rounded-xl text-slate-900 text-lg font-medium focus:outline-none transition-colors ${
+                formData.collegeEmail.trim()
+                  ? isEmailValid
+                    ? "border-emerald-400 focus:border-emerald-500 focus:bg-white"
+                    : "border-amber-300 focus:border-amber-500 focus:bg-white"
+                  : "border-slate-200 focus:border-blue-500 focus:bg-white"
+              }`}
             />
           </div>
         </div>

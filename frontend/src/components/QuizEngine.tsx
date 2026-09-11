@@ -10,7 +10,7 @@ import {
   StudentData,
 } from "../services/api";
 import { useOfflineSync } from "../hooks/useOfflineSync";
-import { ArrowLeft, ArrowRight, CheckCircle, Send, Loader2, AlertTriangle, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, Send, Loader2, AlertTriangle, ShieldAlert, Volume2, X } from "lucide-react";
 
 export interface SubmissionResult {
   totalScore: number;
@@ -29,6 +29,54 @@ interface QuizEngineProps {
   onSubmitted: (result: SubmissionResult) => void;
 }
 
+// Synthesizes a loud, high-visibility security siren via Web Audio API
+function playSecuritySiren() {
+  try {
+    const AudioContextClass =
+      window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+
+    // Modulate frequency to create an unmistakable security alarm siren
+    let isHigh = false;
+    const interval = setInterval(() => {
+      if (ctx.state === "closed") {
+        clearInterval(interval);
+        return;
+      }
+      const now = ctx.currentTime;
+      osc.frequency.setValueAtTime(isHigh ? 600 : 1200, now);
+      isHigh = !isHigh;
+    }, 180);
+
+    gain.gain.setValueAtTime(0.9, ctx.currentTime);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+
+    // Play continuously for 45 seconds
+    setTimeout(() => {
+      clearInterval(interval);
+      try {
+        osc.stop();
+        ctx.close();
+      } catch {}
+    }, 45000);
+  } catch (err) {
+    console.warn("Audio Context Siren failed:", err);
+  }
+}
+
 export const QuizEngine: React.FC<QuizEngineProps> = ({
   student,
   questions,
@@ -38,11 +86,6 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   initialRemainingSeconds = EXAM_DURATION_SECONDS,
   onSubmitted,
 }) => {
-  // Absolute exam deadline, derived once from the server-provided remaining
-  // time. Anchoring to a fixed instant (rather than decrementing a counter)
-  // means a throttled background tab, a reload or a clock drift can never buy a
-  // student extra time. When the deadline passes we force a submission.
-  const deadlineRef = useRef<number>(Date.now() + initialRemainingSeconds * 1000);
   const totalQuestions = shuffledOrder.length || TOTAL_QUESTIONS;
   const [currentIndex, setCurrentIndex] = useState<number>(initialCurrentIndex);
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
@@ -51,9 +94,11 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>("");
 
-  // Anti-Cheating state
+  // Anti-Cheating state (2-Strike Rule: 1 warning -> 2nd strike terminates + plays loud siren)
   const [violationCount, setViolationCount] = useState<number>(0);
   const [showWarningToast, setShowWarningToast] = useState<boolean>(false);
+  const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
+  const [blockedActionNotice, setBlockedActionNotice] = useState<string>("");
 
   const { isOnline, queueOfflineAnswer } = useOfflineSync(student.studentId);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -63,7 +108,18 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const currentOriginalIndex = shuffledOrder[currentIndex] ?? 0;
   const currentQuestion = questions[currentOriginalIndex];
 
-
+  // Disable console and developer inspection tools
+  useEffect(() => {
+    try {
+      const noop = () => {};
+      console.log = noop;
+      console.warn = noop;
+      console.error = noop;
+      console.info = noop;
+      console.table = noop;
+      console.clear();
+    } catch {}
+  }, []);
 
   // Start timer backend trigger on initial render of Question 1 if not started yet
   useEffect(() => {
@@ -73,15 +129,11 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         studentId: student.studentId,
         currentQuestion: currentIndex,
         startTimerNow: true,
-      }).catch(() => {
-        /* timer start is re-attempted on the next real auto-save */
-      });
+      }).catch(() => {});
     }
   }, [student.studentId, currentIndex, isOnline]);
 
-  // Send one answer to the backend, falling back to the durable offline queue
-  // (IndexedDB) whenever the request fails. Shared by the debounced save and by
-  // the unmount flush so the two paths can never diverge.
+  // Send one answer to the backend, falling back to the durable offline queue (IndexedDB)
   const persistAnswer = async (questionId: string, answer: string, idx: number) => {
     if (typeof navigator !== "undefined" && navigator.onLine) {
       try {
@@ -93,18 +145,15 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         });
         return;
       } catch (err) {
-        console.warn("[QUIZ] Online save failed; staging answer in offline queue:", err);
+        console.warn("[QUIZ] Online save failed; staging in offline queue:", err);
       }
     }
 
     await queueOfflineAnswer({ questionId, answer, currentQuestion: idx });
   };
 
-  // Keep the latest pending save so an unmount (submit, timer expiry, route
-  // change) can flush it instead of dropping the answer.
   const pendingSaveRef = useRef<{ questionId: string; answer: string; idx: number } | null>(null);
 
-  // Flush a debounced-but-not-yet-sent answer when the engine unmounts.
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -114,10 +163,9 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         void persistAnswer(pending.questionId, pending.answer, pending.idx);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle Option / Answer change for current question
+  // Handle Option / Answer change for current question (debounced for 400+ user high performance)
   const handleAnswerChange = (newAns: string) => {
     if (!currentQuestion) return;
 
@@ -130,7 +178,6 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       idx: currentIndex,
     };
 
-    // Debounce: replace an in-flight timer so only the latest keystroke is sent.
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(async () => {
@@ -138,7 +185,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       if (!pending) return;
       pendingSaveRef.current = null;
       await persistAnswer(pending.questionId, pending.answer, pending.idx);
-    }, 250);
+    }, 350);
   };
 
   // Submit Final Answers
@@ -146,8 +193,6 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    // Cancel any debounced save that has not fired yet - the full answer set is
-    // being sent below, so a late single-answer write would be redundant.
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -170,8 +215,6 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         unattemptedCount: res.unattemptedCount,
       });
     } catch (err) {
-      // apiSubmitQuiz grades locally on a server failure, so reaching here means
-      // even the local evaluation could not complete.
       console.error("Submission failed:", err);
       setSubmitError(
         "We could not submit your attempt. Please check your connection and try again."
@@ -183,47 +226,171 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
 
   // Anti-Cheating Event Listeners (Tab Switching & Focus Loss)
   useEffect(() => {
+    const handleViolation = () => {
+      setViolationCount((prev) => {
+        const newCount = prev + 1;
+        if (newCount >= 2) {
+          // Strike 2: Close exam immediately and play loud alarm siren!
+          playSecuritySiren();
+          handleSubmit();
+        } else {
+          // Strike 1: Show big warning modal
+          setShowWarningToast(true);
+        }
+        return newCount;
+      });
+    };
+
     const handleVisibilityChange = () => {
-      if (document.hidden && violationCount < 3) {
-        setViolationCount((prev) => {
-          const newCount = prev + 1;
-          if (newCount >= 3) {
-            handleSubmit();
-          } else {
-            setShowWarningToast(true);
-          }
-          return newCount;
-        });
+      if (document.hidden && violationCount < 2) {
+        handleViolation();
       }
     };
 
     const handleBlur = () => {
-      if (violationCount < 3) {
-        setViolationCount((prev) => {
-          const newCount = prev + 1;
-          if (newCount >= 3) {
-            handleSubmit();
-          } else {
-            setShowWarningToast(true);
-          }
-          return newCount;
-        });
+      if (violationCount < 2) {
+        handleViolation();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleBlur);
 
+    // Strict Anti-Cheating Lockdown: Copy, Paste, Right-Click, Selection, DevTools, Extensions
+    const notifyBlocked = (action: string) => {
+      setBlockedActionNotice(`Security Alert: ${action} is strictly prohibited during the assessment.`);
+      setTimeout(() => setBlockedActionNotice(""), 3500);
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      notifyBlocked("Right-clicking (Context Menu)");
+    };
+
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText("");
+        }
+      } catch {}
+      notifyBlocked("Copying text");
+    };
+
+    const handleCut = (e: ClipboardEvent) => {
+      e.preventDefault();
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText("");
+        }
+      } catch {}
+      notifyBlocked("Cutting text");
+    };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      notifyBlocked("Pasting content");
+    };
+
+    const handleSelectStart = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+        return;
+      }
+      e.preventDefault();
+    };
+
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Assessment in progress. Leaving this page will disrupt your exam.";
+      return e.returnValue;
+    };
+
+    // DevTools detection via F12, Shortcuts, and Window anomaly
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+      if (e.key === "F12") {
+        e.preventDefault();
+        setShowDevToolsModal(true);
+        notifyBlocked("DevTools Access (F12)");
+        return;
+      }
+
+      if (e.key === "PrintScreen") {
+        e.preventDefault();
+        notifyBlocked("Screen Capture");
+        return;
+      }
+
+      if (isCtrlOrCmd) {
+        const key = e.key.toLowerCase();
+        if (e.shiftKey && (key === "i" || key === "j" || key === "c" || key === "k")) {
+          e.preventDefault();
+          setShowDevToolsModal(true);
+          notifyBlocked("DevTools Shortcut");
+          return;
+        }
+
+        if (key === "u" || key === "s" || key === "p" || key === "a") {
+          e.preventDefault();
+          notifyBlocked(`Shortcut (Ctrl+${key.toUpperCase()})`);
+          return;
+        }
+
+        if (key === "c" || key === "v" || key === "x") {
+          e.preventDefault();
+          notifyBlocked(`Clipboard shortcut (Ctrl+${key.toUpperCase()})`);
+          return;
+        }
+      }
+    };
+
+    // DevTools Window Size Threshold Detector
+    const checkDevToolsResize = () => {
+      const threshold = 170;
+      const widthDiff = window.outerWidth - window.innerWidth > threshold;
+      const heightDiff = window.outerHeight - window.innerHeight > threshold;
+      if (widthDiff || heightDiff) {
+        setShowDevToolsModal(true);
+      }
+    };
+
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopy);
+    document.addEventListener("cut", handleCut);
+    document.addEventListener("paste", handlePaste);
+    document.addEventListener("selectstart", handleSelectStart);
+    document.addEventListener("dragstart", handleDragStart);
+    document.addEventListener("drop", handleDrop);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", checkDevToolsResize);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopy);
+      document.removeEventListener("cut", handleCut);
+      document.removeEventListener("paste", handlePaste);
+      document.removeEventListener("selectstart", handleSelectStart);
+      document.removeEventListener("dragstart", handleDragStart);
+      document.removeEventListener("drop", handleDrop);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", checkDevToolsResize);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [violationCount, handleSubmit]);
 
-  // Navigation handlers
-  // Navigation only needs to persist the cursor position. Failures here are
-  // non-critical (the position is re-sent on the next answer change), so they
-  // are swallowed without noisy console warnings.
   const persistCursor = (idx: number) => {
     if (!isOnline) return;
     apiAutoSaveAnswer({
@@ -256,46 +423,104 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const answeredCount = Object.values(answers).filter((a) => a && a.trim() !== "").length;
 
   return (
-    <div className="max-w-5xl mx-auto my-6 px-4 pb-32">
-      {/* Strike 3: Terminated Modal */}
-      {violationCount >= 3 && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-rose-500 rounded-2xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center">
-            <AlertTriangle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
-            <h2 className="text-3xl font-black text-slate-900 mb-4">Assessment Terminated</h2>
-            <p className="text-lg text-slate-600 mb-6">
-              You have exceeded the maximum allowed tab switches. Your assessment has been permanently locked and your progress has been submitted automatically.
-            </p>
+    <div
+      className="max-w-5xl mx-auto my-6 px-4 pb-32 select-none"
+      translate="no"
+      spellCheck={false}
+      data-gramm="false"
+      data-gramm_editor="false"
+      data-enable-grammarly="false"
+    >
+      {/* Floating Anti-Cheat Lockdown Toast */}
+      {blockedActionNotice && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[110] bg-rose-600 text-white px-6 py-3.5 rounded-2xl shadow-2xl border-2 border-rose-400 flex items-center gap-3 animate-bounce">
+          <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0" />
+          <span className="text-sm font-black tracking-wide">{blockedActionNotice}</span>
+        </div>
+      )}
+
+      {/* Brutal DevTools & Console Cheating Popup */}
+      {showDevToolsModal && (
+        <div className="fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
+          <div className="bg-white border-4 border-rose-600 rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center space-y-6">
+            <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border-2 border-rose-300 animate-pulse">
+              <ShieldAlert className="w-12 h-12" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-rose-600 uppercase tracking-tight">
+                hahaha u really thought we would over look this
+              </h2>
+              <p className="text-sm uppercase tracking-widest font-mono font-bold text-slate-500 mt-2">
+                Security Violation • Console & DevTools Blocked
+              </p>
+            </div>
+            <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-5 text-left text-sm text-rose-900 font-medium leading-relaxed">
+              ⚠️ Developer Tools, inspect element, and console modifications are strictly monitored and prohibited during Kindle Jr 5.0. This attempt has been logged against your Student ID: <strong>{student.studentId}</strong>.
+            </div>
+            <button
+              onClick={() => setShowDevToolsModal(false)}
+              className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-rose-600 hover:bg-rose-700 shadow-xl transition-all"
+            >
+              Close & Return to Assessment
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Strike 2: Terminated Modal + Loud Audio Siren */}
+      {violationCount >= 2 && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-rose-600 rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center space-y-6">
+            <div className="w-20 h-20 bg-rose-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-xl animate-bounce">
+              <Volume2 className="w-12 h-12" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-rose-600 uppercase tracking-tight">
+                CHEATING DETECTED • EXAM TERMINATED
+              </h2>
+              <p className="text-base text-slate-600 mt-3 font-semibold">
+                Tab switching was detected again after the warning. Your assessment has been permanently closed, submitted automatically, and the security alarm has been triggered.
+              </p>
+            </div>
+            <div className="bg-slate-100 rounded-2xl p-4 font-mono text-xs font-bold text-slate-700">
+              Student ID: {student.studentId} | Name: {student.name}
+            </div>
             {isSubmitting && (
               <div className="flex items-center justify-center gap-2 text-rose-600 font-bold text-lg">
-                <Loader2 className="w-6 h-6 animate-spin" /> Submitting...
+                <Loader2 className="w-6 h-6 animate-spin" /> Auto-submitting responses...
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Strike 1 & 2: Warning Overlay */}
-      {showWarningToast && violationCount < 3 && (
-        <div className="fixed inset-0 z-[100] bg-gradient-to-br from-pink-500/95 to-rose-600/95 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center border-2 border-rose-200">
-            <AlertTriangle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
-            <h2 className="text-3xl font-black text-slate-900 mb-4">Warning: Tab switching detected</h2>
-            <p className="text-lg text-slate-600 mb-8 font-medium">
-              Do not leave the assessment window. This is strike {violationCount} of 3. On the third strike, your assessment will be terminated automatically.
-            </p>
+      {/* Strike 1: Warning Overlay (1 Warning Only) */}
+      {showWarningToast && violationCount < 2 && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center border-4 border-amber-400 space-y-6">
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto border-2 border-amber-300">
+              <AlertTriangle className="w-10 h-10" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+                FINAL WARNING: Tab Switching Detected
+              </h2>
+              <p className="text-base text-slate-600 mt-3 font-medium">
+                You switched tabs or minimized the assessment window. <strong>This is your 1st and ONLY warning.</strong> If you switch tabs or lose focus again, your exam will immediately terminate and a loud alarm will sound.
+              </p>
+            </div>
             <button
               onClick={() => setShowWarningToast(false)}
-              className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white bg-rose-600 hover:bg-rose-700 shadow-xl transition-all"
+              className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-amber-500 hover:bg-amber-600 shadow-xl transition-all"
             >
-              I Understand
+              I Understand • Continue Exam
             </button>
           </div>
         </div>
       )}
 
       {/* Part 3.4: Student Status & HUD */}
-      <div className="bg-white/90 backdrop-blur-2xl rounded-2xl p-6 border-2 border-slate-200 shadow-sm mb-8">
+      <div className="bg-white/95 backdrop-blur-2xl rounded-2xl p-6 border-2 border-slate-200 shadow-sm mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm uppercase tracking-widest font-semibold text-slate-500">
           <div className="flex items-center space-x-4">
             <div>
@@ -317,7 +542,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
             <Timer initialSeconds={remainingSeconds} onExpire={handleSubmit} />
             <button
               onClick={() => setShowConfirmModal(true)}
-              className="py-3 px-6 border-2 border-transparent rounded-xl font-bold text-base text-white bg-pink-500 hover:bg-pink-600 shadow-md transition-all flex items-center gap-2"
+              className="py-3 px-6 border-2 border-transparent rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all flex items-center gap-2"
             >
               <Send className="w-5 h-5" /> Submit
             </button>
@@ -325,117 +550,81 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         </div>
       </div>
 
-      {/* Question Component */}
-      <div className="space-y-8">
-        {currentQuestion ? (
-          <QuestionCard
-            question={currentQuestion}
-            questionIndex={currentIndex}
-            totalQuestions={shuffledOrder.length}
-            userAnswer={answers[currentQuestion.id] || ""}
-            onAnswerChange={handleAnswerChange}
-          />
-        ) : (
-          <div className="p-12 text-center text-slate-500 bg-white/90 backdrop-blur-2xl rounded-2xl border-2 border-slate-200 text-lg">
-            Kindly wait a moment.
-          </div>
-        )}
+      {/* Part 3.5: Question Layout */}
+      {currentQuestion && (
+        <QuestionCard
+          question={currentQuestion}
+          questionIndex={currentIndex}
+          totalQuestions={totalQuestions}
+          userAnswer={answers[currentQuestion.id] || ""}
+          onAnswerChange={handleAnswerChange}
+        />
+      )}
 
-        {/* Navigation Controls */}
-        <div className="flex items-center justify-between bg-white/90 backdrop-blur-2xl rounded-2xl p-6 border-2 border-slate-200 shadow-sm">
+      {/* Part 3.6: Bottom Navigation Floating Dock */}
+      <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-xl border-t-2 border-slate-200 p-4 z-40 shadow-lg">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button
             onClick={handlePrevious}
             disabled={currentIndex === 0}
-            className="py-4 px-6 rounded-xl text-lg font-bold border-2 border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+            className={`py-3.5 px-6 rounded-xl text-sm font-bold border-2 transition-all flex items-center gap-2 ${
+              currentIndex === 0
+                ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                : "border-slate-300 bg-white hover:bg-slate-100 text-slate-700 shadow-sm"
+            }`}
           >
-            <ArrowLeft className="w-5 h-5" /> Previous
+            <ArrowLeft className="w-4 h-4" /> Previous
           </button>
 
-          <span className="text-base font-mono font-bold text-slate-500">
-            QUESTION <span className="text-blue-600 font-black text-xl">{currentIndex + 1}</span> / {shuffledOrder.length}
+          <span className="text-sm font-bold font-mono text-slate-600">
+            {currentIndex + 1} of {totalQuestions}
           </span>
 
-          {currentIndex < shuffledOrder.length - 1 ? (
-            <button
-              onClick={handleNext}
-              className="py-4 px-6 rounded-xl text-lg font-bold border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md transition-all"
-            >
-              Next <ArrowRight className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowConfirmModal(true)}
-              className="py-4 px-6 rounded-xl text-lg font-bold border-2 border-pink-500 bg-pink-500 hover:bg-pink-600 text-white flex items-center gap-2 shadow-md transition-all"
-            >
-              Review & Submit <CheckCircle className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Part 3.2: Fixed Bottom Question Carousel */}
-      <div className="fixed bottom-0 left-0 w-full h-28 bg-white/95 backdrop-blur-xl border-t border-slate-200 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <div className="flex flex-row overflow-x-auto scrollbar-hide items-center gap-4 px-6 h-full max-w-7xl mx-auto">
-          {shuffledOrder.map((origIdx, displayIdx) => {
-            const q = questions[origIdx];
-            const isAnswered = q && answers[q.id] && answers[q.id].trim() !== "";
-            const isCurrent = currentIndex === displayIdx;
-
-            return (
-              <button
-                key={q ? q.id : displayIdx}
-                onClick={() => handleGridSelect(displayIdx)}
-                className={`w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-xl font-mono text-lg font-bold border-2 transition-all duration-200 ${
-                  isCurrent
-                    ? "bg-blue-600 text-white border-blue-600 scale-110 shadow-lg z-10"
-                    : isAnswered
-                    ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                    : "bg-slate-50 text-slate-400 border-slate-200 hover:border-blue-300 hover:text-blue-500"
-                }`}
-              >
-                {displayIdx + 1}
-              </button>
-            );
-          })}
+          <button
+            onClick={handleNext}
+            disabled={currentIndex === totalQuestions - 1}
+            className={`py-3.5 px-6 rounded-xl text-sm font-bold border-2 transition-all flex items-center gap-2 ${
+              currentIndex === totalQuestions - 1
+                ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                : "border-blue-600 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+            }`}
+          >
+            Next <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-10 max-w-lg w-full shadow-2xl text-center">
-            <h3 className="text-2xl font-black text-slate-900 mb-2">Confirm Quiz Submission</h3>
-            <p className="text-base text-slate-600 mb-8 font-medium">
-              You have answered <strong className="text-blue-600 font-mono text-lg">{answeredCount}</strong> out of{" "}
-              <strong className="text-blue-600 font-mono text-lg">{shuffledOrder.length}</strong> questions. Are you sure you want to finish?
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border-2 border-slate-200">
+            <h3 className="text-xl font-black text-slate-900 mb-2">Confirm Final Submission</h3>
+            <p className="text-slate-600 text-sm mb-6 leading-relaxed">
+              You have answered <strong>{answeredCount}</strong> out of{" "}
+              <strong>{totalQuestions}</strong> questions. Once submitted, you cannot change your answers.
             </p>
 
             {submitError && (
-              <p className="mb-6 text-sm font-bold text-rose-600 bg-rose-50 border-2 border-rose-200 rounded-xl px-4 py-3">
+              <div className="mb-4 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl">
                 {submitError}
-              </p>
+              </div>
             )}
 
-            <div className="flex items-center gap-4 pt-2">
+            <div className="flex items-center justify-end space-x-3">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-4 rounded-xl font-bold text-lg text-slate-600 bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 transition-all"
+                disabled={isSubmitting}
+                className="py-2.5 px-4 rounded-xl text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
               >
-                Continue Quiz
+                Continue Test
               </button>
-
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="flex-1 py-4 rounded-xl font-bold text-lg text-white bg-pink-500 hover:bg-pink-600 shadow-lg border-2 border-transparent transition-all flex items-center justify-center gap-2"
+                className="py-2.5 px-5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow flex items-center gap-2"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" /> Submitting...
-                  </>
-                ) : (
-                  "Yes, Submit Now"
-                )}
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                Confirm & Submit
               </button>
             </div>
           </div>

@@ -79,12 +79,12 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
               </div>
               <h3 className="font-bold text-slate-900 text-xl">C Language Track</h3>
               <p className="text-sm text-slate-600 mt-2 leading-relaxed font-medium">
-                45 questions covering print statements, arithmetic, precedence, if/else, and basic loops in C.
+                60 multiple choice questions covering C syntax, data types, operators, conditionals, and loops.
               </p>
             </div>
             <div className="mt-5 pt-4 border-t-2 border-slate-200 flex items-center justify-between text-sm font-mono font-bold">
               <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-xl border border-blue-200">
-                15 Aptitude + 45 C
+                C Assessment
               </span>
               <span className="px-3 py-1.5 bg-slate-900 text-white rounded-xl">
                 60 Qs
@@ -112,12 +112,12 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
               </div>
               <h3 className="font-bold text-slate-900 text-xl">Python Track</h3>
               <p className="text-sm text-slate-600 mt-2 leading-relaxed font-medium">
-                45 questions covering basic syntax, operators, string operations, if/elif/else, and simple loops in Python.
+                60 multiple choice questions covering Python core concepts, variables, operators, collections, and control structures.
               </p>
             </div>
             <div className="mt-5 pt-4 border-t-2 border-slate-200 flex items-center justify-between text-sm font-mono font-bold">
               <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-xl border border-blue-200">
-                15 Aptitude + 45 Python
+                Python Assessment
               </span>
               <span className="px-3 py-1.5 bg-slate-900 text-white rounded-xl">
                 60 Qs
@@ -133,8 +133,8 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
             Exam Structure Overview (60 Questions Total):
           </p>
           <ul className="list-disc list-inside space-y-1 text-slate-700 pl-2 font-medium">
-            <li>Part 1: 15 Aptitude & Logical Reasoning Questions (1 Mark Each)</li>
-            <li>Part 2: 45 Coding Questions in {selectedTrack} (1 Mark Each)</li>
+            <li>Total: 60 Multiple-Choice Questions in {selectedTrack === "C" ? "C Language" : "Python"} (1 Mark Each)</li>
+            <li>Randomized question sequence uniquely shuffled for every candidate.</li>
             <li>Strict <span className="font-bold text-blue-600">60-Minute Timer</span> starts automatically on Question 1 render.</li>
           </ul>
         </div>

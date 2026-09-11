@@ -2,386 +2,841 @@
   {
     "id": "py_1",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be the output of the following Python code?\n```python\nx = 5\ny = 10\nif x > 3 and y < 15:\n    print(\"YES\")\nelse:\n    print(\"NO\")\n```",
-    "options": ["YES", "NO", "SyntaxError", "None"],
-    "answer": "YES",
-    "explanation": "5 > 3 is True and 10 < 15 is True. Both conditions are met, so YES is printed."
+    "section": "Python",
+    "text": "An ordered set of instructions to be executed by a computer to carry out a specific task is called a ___________.",
+    "options": [
+      "Program",
+      "Instruction",
+      "Code",
+      "None of the above"
+    ],
+    "answer": "Program",
+    "explanation": "Option A: Program"
   },
   {
     "id": "py_2",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What keyword is used in Python to define conditional branches after an initial `if` statement?",
-    "answer": "elif",
-    "explanation": "elif is short for else if in Python."
+    "type": "mcq",
+    "section": "Python",
+    "text": "Computers understand the language of 0s and 1s which is called __________.",
+    "options": [
+      "Machine language",
+      "Low level language",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Both a) and b)",
+    "explanation": "Option C: Both a) and b)"
   },
   {
     "id": "py_3",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the output of this loop?\n```python\ntotal = 0\nfor i in range(1, 5):\n    total += i\nprint(total)\n```",
-    "options": ["4", "6", "10", "15"],
-    "answer": "10",
-    "explanation": "range(1, 5) produces 1, 2, 3, 4. Sum is 1 + 2 + 3 + 4 = 10."
+    "section": "Python",
+    "text": "A program written in a high-level language is called _________.",
+    "options": [
+      "Language",
+      "Source code",
+      "Machine code",
+      "None of the above"
+    ],
+    "answer": "Source code",
+    "explanation": "Option B: Source code"
   },
   {
     "id": "py_4",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "Which of the following is the exponentiation (power) operator in Python?",
-    "options": ["^", "**", "//", "pow"],
-    "answer": "**",
-    "explanation": "** operator raises base to power (e.g., 2 ** 3 = 8)."
+    "section": "Python",
+    "text": "An interpreter read the program statements _________.",
+    "options": [
+      "All the source at a time",
+      "One by one",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "One by one",
+    "explanation": "Option B: One by one"
   },
   {
     "id": "py_5",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What will be printed by `print(17 % 5)` in Python?",
-    "answer": "2",
-    "explanation": "17 divided by 5 leaves a remainder of 2."
+    "type": "mcq",
+    "section": "Python",
+    "text": "Python is a __________.",
+    "options": [
+      "Low level language",
+      "High level language",
+      "Machine level language",
+      "All of the above"
+    ],
+    "answer": "High level language",
+    "explanation": "Option B: High level language"
   },
   {
     "id": "py_6",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be the output of the following code?\n```python\ncount = 1\nwhile count < 4:\n    count += 1\nprint(count)\n```",
-    "options": ["3", "4", "5", "Infinite loop"],
-    "answer": "4",
-    "explanation": "count increments from 1 -> 2 -> 3 -> 4. Loop terminates when count < 4 is False."
+    "section": "Python",
+    "text": "Python is platform independent, meaning ___________.",
+    "options": [
+      "It can run various operating systems",
+      "It can run various hardware platforms",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Both a) and b)",
+    "explanation": "Option C: Both a) and b)"
   },
   {
     "id": "py_7",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What function is used to take user input as a string in Python?",
-    "answer": "input",
-    "explanation": "input() function reads a line from stdin."
+    "type": "mcq",
+    "section": "Python",
+    "text": "Python uses indentation for __________.",
+    "options": [
+      "Blocks",
+      "Nested Blocks",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Both a) and b)",
+    "explanation": "Option C: Both a) and b)"
   },
   {
     "id": "py_8",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the result of floor division operator `//` in `print(10 // 3)`?",
-    "options": ["3", "3.33", "3.0", "4"],
-    "answer": "3",
-    "explanation": "// returns the floor integer part of division."
+    "section": "Python",
+    "text": "To write and run (execute) a Python program, we need to have a ___________.",
+    "options": [
+      "Python interpreter installed on the computer",
+      "We can use any online python interpreter",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Both a) and b)",
+    "explanation": "Option C: Both a) and b)"
   },
   {
     "id": "py_9",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What does the following code print?\n```python\nyear = 2024\nif (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0):\n    print(\"LEAP\")\nelse:\n    print(\"NORMAL\")\n```",
-    "options": ["LEAP", "NORMAL", "2024", "Error"],
-    "answer": "LEAP",
-    "explanation": "2024 is divisible by 4 and not 100, so it prints LEAP."
+    "section": "Python",
+    "text": "The interpreter is also called python _______.",
+    "options": [
+      "Shell",
+      "Cell",
+      "Program",
+      "None of the above"
+    ],
+    "answer": "Shell",
+    "explanation": "Option A: Shell"
   },
   {
     "id": "py_10",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is the exact output of this code snippet?\n```python\nnum = 8\nif num % 2 == 0:\n    print(\"EVEN\")\nelse:\n    print(\"ODD\")\n```",
-    "answer": "EVEN",
-    "explanation": "8 % 2 == 0 is True, printing EVEN."
+    "type": "mcq",
+    "section": "Python",
+    "text": "To work in the interactive mode, we can simply type a Python statement on the ________ prompt directly.",
+    "options": [
+      ">>>",
+      ">>",
+      ">",
+      "None of the above"
+    ],
+    "answer": ">>>",
+    "explanation": "Option A: >>>"
   },
   {
     "id": "py_11",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the data type of the result of `type(5 / 2)` in Python 3?",
-    "options": ["<class 'int'>", "<class 'float'>", "<class 'str'>", "<class 'double'>"],
-    "answer": "<class 'float'>",
-    "explanation": "Standard division / in Python 3 always returns a float (2.5)."
+    "section": "Python",
+    "text": "In the script mode, we can write a Python program in a ________, save it and then use the interpreter to execute it.",
+    "options": [
+      "Prompt",
+      "File",
+      "Folder",
+      "All of the above"
+    ],
+    "answer": "File",
+    "explanation": "Option B: File"
   },
   {
     "id": "py_12",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be printed by `print(\"Hello\" * 3)`?",
-    "options": ["HelloHelloHello", "Hello 3", "SyntaxError", "HelloHello"],
-    "answer": "HelloHelloHello",
-    "explanation": "String multiplication in Python repeats the string 3 times."
+    "section": "Python",
+    "text": "By default the python extension is __________.",
+    "options": [
+      ".py",
+      ".ppy",
+      ".pp",
+      ".pyy"
+    ],
+    "answer": ".py",
+    "explanation": "Option A: .py"
   },
   {
     "id": "py_13",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is the output of the code below?\n```python\nunits = 120\nbill = 0\nif units <= 100:\n    bill = units * 2\nelse:\n    bill = (100 * 2) + (units - 100) * 5\nprint(bill)\n```",
-    "answer": "300",
-    "explanation": "units = 120. bill = 200 + (20 * 5) = 300."
+    "type": "mcq",
+    "section": "Python",
+    "text": "__________ are reserved words in python.",
+    "options": [
+      "Keyword",
+      "Interpreter",
+      "Program",
+      "None of the above"
+    ],
+    "answer": "Keyword",
+    "explanation": "Option A: Keyword"
   },
   {
     "id": "py_14",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "Which boolean operator in Python reverses the logical state of its operand?",
-    "options": ["! ", "not", "reverse", "invert"],
-    "answer": "not",
-    "explanation": "not operator inverts boolean value (not True is False)."
+    "section": "Python",
+    "text": "The rules for naming an identifier in Python are ________.",
+    "options": [
+      "Name should begin with an uppercase, lowercase or underscore",
+      "It can be of any length",
+      "It should not be a keyword",
+      "All of the above"
+    ],
+    "answer": "All of the above",
+    "explanation": "Option D: All of the above"
   },
   {
     "id": "py_15",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What will be printed?\n```python\na = 3\nb = 7\nif a > 5 or b > 5:\n    print(\"MATCH\")\nelse:\n    print(\"NO MATCH\")\n```",
-    "answer": "MATCH",
-    "explanation": "b > 5 (7 > 5) is True, so or condition evaluates to True."
+    "type": "mcq",
+    "section": "Python",
+    "text": "To define variables in python _______ special symbols is not allowed.",
+    "options": [
+      "@",
+      "# and !",
+      "$ and %",
+      "All of the above"
+    ],
+    "answer": "All of the above",
+    "explanation": "Option D: All of the above"
   },
   {
     "id": "py_16",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will happen during the execution of this code?\n```python\nk = 1\nwhile k <= 5:\n    print(k)\n```",
-    "options": ["Prints 1 to 5", "Prints 1 five times", "Infinite loop printing 1", "IndentationError"],
-    "answer": "Infinite loop printing 1",
-    "explanation": "k is never modified in the loop body, leading to an infinite loop."
+    "section": "Python",
+    "text": "A variable in a program is uniquely identified by a name __________.",
+    "options": [
+      "Identifier",
+      "Keyword",
+      "Code",
+      "None of the above"
+    ],
+    "answer": "Identifier",
+    "explanation": "Option A: Identifier"
   },
   {
     "id": "py_17",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is the output of `print(bool(\"\"))` in Python?",
-    "answer": "False",
-    "explanation": "An empty string in Python is falsy."
+    "type": "mcq",
+    "section": "Python",
+    "text": "Variable in python refers to an ________.",
+    "options": [
+      "Keyword",
+      "Object",
+      "Alphabets",
+      "None of the above"
+    ],
+    "answer": "Object",
+    "explanation": "Option B: Object"
   },
   {
     "id": "py_18",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be the output of the following code snippet?\n```python\nx = 10\nif x > 15:\n    print(\"A\")\nelif x > 5:\n    print(\"B\")\nelse:\n    print(\"C\")\n```",
-    "options": ["A", "B", "C", "BC"],
-    "answer": "B",
-    "explanation": "x > 15 is False. x > 5 (10 > 5) is True, printing B and exiting if-elif block."
+    "section": "Python",
+    "text": "The variable message holds string type value and so its content is assigned within _________.",
+    "options": [
+      "Double quotes \"\"",
+      "Single quotes ''",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Both a) and b)",
+    "explanation": "Option C: Both a) and b)"
   },
   {
     "id": "py_19",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What will be printed by this code?\n```python\nprod = 1\nfor i in range(1, 4):\n    prod *= i\nprint(prod)\n```",
-    "answer": "6",
-    "explanation": "range(1, 4) gives 1, 2, 3. prod = 1 * 1 * 2 * 3 = 6."
+    "type": "mcq",
+    "section": "Python",
+    "text": "_________ must always be assigned values before they are used in expressions.",
+    "options": [
+      "Keyword",
+      "Variable",
+      "Code",
+      "None of the above"
+    ],
+    "answer": "Variable",
+    "explanation": "Option B: Variable"
   },
   {
     "id": "py_20",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the result of expression `10 + 5 * 2` in Python?",
-    "options": ["30", "20", "25", "17"],
-    "answer": "20",
-    "explanation": "Multiplication precedes addition: 5 * 2 = 10; 10 + 10 = 20."
+    "section": "Python",
+    "text": "___________ are used to add a remark or a note in the source code.",
+    "options": [
+      "Keyword",
+      "Source",
+      "Comment",
+      "None of the above"
+    ],
+    "answer": "Comment",
+    "explanation": "Option C: Comment"
   },
   {
     "id": "py_21",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be the output of this code?\n```python\na = True\nb = False\nprint(a and not b)\n```",
-    "options": ["True", "False", "None", "Error"],
-    "answer": "True",
-    "explanation": "not False is True. True and True is True."
+    "section": "Python",
+    "text": "__________ are not executed by a python interpreter.",
+    "options": [
+      "Keyword",
+      "Source",
+      "Comment",
+      "None of the above"
+    ],
+    "answer": "Comment",
+    "explanation": "Option C: Comment"
   },
   {
     "id": "py_22",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is the value printed?\n```python\nval = 100 if 10 > 5 else 200\nprint(val)\n```",
-    "answer": "100",
-    "explanation": "Conditional expression evaluates 10 > 5 (True), picking 100."
+    "type": "mcq",
+    "section": "Python",
+    "text": "In python comments start from _______.",
+    "options": [
+      "#",
+      "@",
+      "%",
+      "$"
+    ],
+    "answer": "#",
+    "explanation": "Option A: #"
   },
   {
     "id": "py_23",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be the output of this code?\n```python\ni = 5\nwhile i > 0:\n    i -= 2\nprint(i)\n```",
-    "options": ["0", "-1", "1", "3"],
-    "answer": "-1",
-    "explanation": "i sequence: 5 -> 3 -> 1 -> -1. Loop terminates when i is -1."
+    "section": "Python",
+    "text": "Python treats every value or data item whether numeric, string, or other type as an _________.",
+    "options": [
+      "Object",
+      "Variable",
+      "Keyword",
+      "None of the above"
+    ],
+    "answer": "Object",
+    "explanation": "Option A: Object"
   },
   {
     "id": "py_24",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What keyword is used to exit a loop prematurely in Python?",
-    "answer": "break",
-    "explanation": "break exits the innermost loop."
+    "type": "mcq",
+    "section": "Python",
+    "text": "________ data type cannot have duplicate entries.",
+    "options": [
+      "List",
+      "Set",
+      "String",
+      "None of the above"
+    ],
+    "answer": "Set",
+    "explanation": "Option B: Set"
   },
   {
     "id": "py_25",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the output of the following Python code?\n```python\nmarks = 75\nif marks >= 80:\n    print(\"A\")\nelif marks >= 70:\n    print(\"B\")\nelse:\n    print(\"C\")\n```",
-    "options": ["A", "B", "C", "AB"],
-    "answer": "B",
-    "explanation": "75 >= 80 is False. 75 >= 70 is True, printing B."
+    "section": "Python",
+    "text": "None is a special data type with a single value. It is used to signify the absence of value in a situation.",
+    "options": [
+      "List",
+      "Set",
+      "String",
+      "None"
+    ],
+    "answer": "None",
+    "explanation": "Option D: None"
   },
   {
     "id": "py_26",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What will be printed by `print(str(10) + str(20))`?",
-    "answer": "1020",
-    "explanation": "Concatenation of two strings '10' and '20' yields '1020'."
+    "type": "mcq",
+    "section": "Python",
+    "text": "___________ in Python holds data items in key-value pairs.",
+    "options": [
+      "Dictionary",
+      "Set",
+      "String",
+      "None"
+    ],
+    "answer": "Dictionary",
+    "explanation": "Option A: Dictionary"
   },
   {
     "id": "py_27",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "Which of the following built-in functions converts a string numeric representation into an integer?",
-    "options": ["str()", "int()", "float()", "num()"],
-    "answer": "int()",
-    "explanation": "int() parses string/float into integer."
+    "section": "Python",
+    "text": "Items in a dictionary are enclosed in __________.",
+    "options": [
+      "Parenthesis ()",
+      "Brackets []",
+      "Curly brackets {}",
+      "All of the above"
+    ],
+    "answer": "Curly brackets {}",
+    "explanation": "Option C: Curly brackets {}"
   },
   {
     "id": "py_28",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is printed by this loop?\n```python\ncount = 0\nfor i in range(0, 10, 3):\n    count += 1\nprint(count)\n```",
-    "answer": "4",
-    "explanation": "range(0, 10, 3) gives 0, 3, 6, 9 (4 items). count is 4."
+    "type": "mcq",
+    "section": "Python",
+    "text": "In the dictionary every key is separated from its value using a _________.",
+    "options": [
+      "Colon (:)",
+      "Semicolon (;)",
+      "Comma (,)",
+      "All of the above"
+    ],
+    "answer": "Colon (:)",
+    "explanation": "Option A: Colon (:)"
   },
   {
     "id": "py_29",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "Which of the following is an invalid variable identifier in Python?",
-    "options": ["_score", "student2", "2student", "student_name"],
-    "answer": "2student",
-    "explanation": "Variable names cannot start with numbers."
+    "section": "Python",
+    "text": "Variables whose values can be changed after they are created and assigned are called __________.",
+    "options": [
+      "Immutable",
+      "Mutable",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Mutable",
+    "explanation": "Option B: Mutable"
   },
   {
     "id": "py_30",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is the output of `print((5 == 5) and (3 > 10))`?",
-    "answer": "False",
-    "explanation": "True and False evaluates to False."
+    "type": "mcq",
+    "section": "Python",
+    "text": "____________ that are used to perform the four basic arithmetic operations as well as modular division, floor division and exponentiation.",
+    "options": [
+      "Arithmetic Operator",
+      "Logical Operator",
+      "Relational Operator",
+      "All of the above"
+    ],
+    "answer": "Arithmetic Operator",
+    "explanation": "Option A: Arithmetic Operator"
   },
   {
     "id": "py_31",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be printed by the following code?\n```python\na = 15\nif a % 3 == 0:\n    if a % 5 == 0:\n        print(\"FIZZBUZZ\")\n    else:\n        print(\"FIZZ\")\n```",
-    "options": ["FIZZ", "BUZZ", "FIZZBUZZ", "Nothing"],
-    "answer": "FIZZBUZZ",
-    "explanation": "15 is divisible by both 3 and 5."
+    "section": "Python",
+    "text": "__________ calculation on operands. That is, raise the operand on the left to the power of the operand on the right.",
+    "options": [
+      "Floor Division (//)",
+      "Exponent (**)",
+      "Modulus (%)",
+      "None of the above"
+    ],
+    "answer": "Exponent (**)",
+    "explanation": "Option B: Exponent (**)"
   },
   {
     "id": "py_32",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "Fill in the blank keyword used to skip the rest of the current loop iteration:\n`for i in range(5):\n    if i == 2:\n        _______\n`",
-    "answer": "continue",
-    "explanation": "continue skips the current loop iteration."
+    "type": "mcq",
+    "section": "Python",
+    "text": "_____________ compares the values of the operands on either side and determines the relationship among them.",
+    "options": [
+      "Arithmetic Operator",
+      "Logical Operator",
+      "Relational Operator",
+      "All of the above"
+    ],
+    "answer": "Relational Operator",
+    "explanation": "Option C: Relational Operator"
   },
   {
     "id": "py_33",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the output of this code?\n```python\nfor char in \"GEU\":\n    print(char, end=\"\")\n```",
-    "options": ["GEU", "G E U", "G\\nE\\nU", "Error"],
-    "answer": "GEU",
-    "explanation": "end=\"\" prevents newlines between printed characters."
+    "section": "Python",
+    "text": "_________ assigns or changes the value of the variable on its left.",
+    "options": [
+      "Relational Operator",
+      "Assignment Operator",
+      "Logical Operator",
+      "All of the above"
+    ],
+    "answer": "Assignment Operator",
+    "explanation": "Option B: Assignment Operator"
   },
   {
     "id": "py_34",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What will be printed?\n```python\nx = 20\ny = 30\nmaximum = x if x > y else y\nprint(maximum)\n```",
-    "answer": "30",
-    "explanation": "x > y is False, so y (30) is chosen."
+    "type": "mcq",
+    "section": "Python",
+    "text": "Membership operators are used to check if a value is a member of the given sequence or not.",
+    "options": [
+      "Identity Operator",
+      "Membership Operators",
+      "Relational Operators",
+      "All of the above"
+    ],
+    "answer": "Membership Operators",
+    "explanation": "Option B: Membership Operators"
   },
   {
     "id": "py_35",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the output of `print(len(\"Kindle Jr\"))`?",
-    "options": ["8", "9", "10", "11"],
-    "answer": "9",
-    "explanation": "\"Kindle Jr\" has 9 characters including space (K-i-n-d-l-e- -J-r)."
+    "section": "Python",
+    "text": "An __________ is defined as a combination of constants, variables, and operators.",
+    "options": [
+      "Expressions",
+      "Precedence",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Expressions",
+    "explanation": "Option A: Expressions"
   },
   {
     "id": "py_36",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is the value of `i` after this loop finishes?\n```python\nfor i in range(5):\n    pass\nprint(i)\n```",
-    "answer": "4",
-    "explanation": "In Python, range(5) ends with i assigned 4 at the last iteration."
+    "type": "mcq",
+    "section": "Python",
+    "text": "Evaluation of the expression is based on __________ of operators.",
+    "options": [
+      "Expressions",
+      "Precedence",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Precedence",
+    "explanation": "Option B: Precedence"
   },
   {
     "id": "py_37",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be the output?\n```python\na = 5\nb = 2\nprint(a / b)\n```",
-    "options": ["2", "2.5", "2.0", "2.50"],
-    "answer": "2.5",
-    "explanation": "Floating point division 5 / 2 = 2.5."
+    "section": "Python",
+    "text": "Example of membership operators.",
+    "options": [
+      "in",
+      "not in",
+      "in and not in",
+      "All of the above"
+    ],
+    "answer": "All of the above",
+    "explanation": "Option D: All of the above"
   },
   {
     "id": "py_38",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What will be printed?\n```python\nsum_val = 0\ni = 1\nwhile i <= 3:\n    sum_val += i\n    i += 1\nprint(sum_val)\n```",
-    "answer": "6",
-    "explanation": "sum_val = 1 + 2 + 3 = 6."
+    "type": "mcq",
+    "section": "Python",
+    "text": "Example of identity operators.",
+    "options": [
+      "is",
+      "is not",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Both a) and b)",
+    "explanation": "Option C: Both a) and b)"
   },
   {
     "id": "py_39",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What does the `%` (modulo) operator calculate in Python?",
-    "options": ["Percentage", "Division quotient", "Remainder of division", "Exponentiation"],
-    "answer": "Remainder of division",
-    "explanation": "% operator computes remainder."
+    "section": "Python",
+    "text": "In Python, we have the ____________ function for taking the user input.",
+    "options": [
+      "prompt()",
+      "input()",
+      "in()",
+      "None of the above"
+    ],
+    "answer": "input()",
+    "explanation": "Option B: input()"
   },
   {
     "id": "py_40",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is the output of `print(3 + 4 * 2 - 1)`?",
-    "answer": "10",
-    "explanation": "4 * 2 = 8; 3 + 8 = 11; 11 - 1 = 10."
+    "type": "mcq",
+    "section": "Python",
+    "text": "In Python, we have the ___________ function for displaying the output.",
+    "options": [
+      "prompt()",
+      "output()",
+      "print()",
+      "None of the above"
+    ],
+    "answer": "print()",
+    "explanation": "Option C: print()"
   },
   {
     "id": "py_41",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the result of `not (5 > 2)` in Python?",
-    "options": ["True", "False", "None", "Error"],
-    "answer": "False",
-    "explanation": "5 > 2 is True. not True is False."
+    "section": "Python",
+    "text": "____________, also called type casting, happens when data type conversion takes place because the programmer forced it in the program.",
+    "options": [
+      "Explicit conversion",
+      "Implicit conversion",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Explicit conversion",
+    "explanation": "Option A: Explicit conversion"
   },
   {
     "id": "py_42",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What will be printed by this code?\n```python\ntotal = 0\nfor i in range(1, 6):\n    if i % 2 != 0:\n        total += i\nprint(total)\n```",
-    "answer": "9",
-    "explanation": "Odd numbers in range(1, 6) are 1, 3, 5. Sum = 9."
+    "type": "mcq",
+    "section": "Python",
+    "text": "__________, also known as coercion, happens when data type conversion is done automatically by Python and is not instructed by the programmer.",
+    "options": [
+      "Explicit conversion",
+      "Implicit conversion",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Implicit conversion",
+    "explanation": "Option B: Implicit conversion"
   },
   {
     "id": "py_43",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What is the output of `print(\"Python\"[0])`?",
-    "options": ["P", "y", "n", "Error"],
-    "answer": "P",
-    "explanation": "0-based indexing accesses first character 'P'."
+    "section": "Python",
+    "text": "A programmer can make mistakes while writing a program, and hence, the program may not execute or may generate wrong output. The process of identifying and removing such mistakes is also known as __________.",
+    "options": [
+      "Bugs",
+      "Errors",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Both a) and b)",
+    "explanation": "Option C: Both a) and b)"
   },
   {
     "id": "py_44",
-    "type": "blank",
-    "section": "Python Coding",
-    "text": "What is the output of `print(14 // 4)`?",
-    "answer": "3",
-    "explanation": "Floor division 14 // 4 gives 3."
+    "type": "mcq",
+    "section": "Python",
+    "text": "Identifying and removing bugs or errors from the program is also known as __________.",
+    "options": [
+      "Debugging",
+      "Mistakes",
+      "Error",
+      "None of the above"
+    ],
+    "answer": "Debugging",
+    "explanation": "Option A: Debugging"
   },
   {
     "id": "py_45",
     "type": "mcq",
-    "section": "Python Coding",
-    "text": "What will be the output of this code?\n```python\nx = 10\nif x > 5:\n    print(\"A\", end=\"\")\nif x > 8:\n    print(\"B\", end=\"\")\n```",
-    "options": ["A", "B", "AB", "None"],
-    "answer": "AB",
-    "explanation": "Both if statements are independent and True, so 'AB' is printed."
+    "section": "Python",
+    "text": "Which of the following errors occur in python programs.",
+    "options": [
+      "Syntax error",
+      "Logical error",
+      "Runtime error",
+      "All of the above"
+    ],
+    "answer": "All of the above",
+    "explanation": "Option D: All of the above"
+  },
+  {
+    "id": "py_46",
+    "type": "mcq",
+    "section": "Python",
+    "text": "A _________ produces an undesired output but without abrupt termination of the execution of the program.",
+    "options": [
+      "Syntax error",
+      "Logical error",
+      "Runtime error",
+      "All of the above"
+    ],
+    "answer": "Logical error",
+    "explanation": "Option B: Logical error"
+  },
+  {
+    "id": "py_47",
+    "type": "mcq",
+    "section": "Python",
+    "text": "A ___________ causes abnormal termination of the program while it is executing.",
+    "options": [
+      "Syntax error",
+      "Logical error",
+      "Runtime error",
+      "All of the above"
+    ],
+    "answer": "Runtime error",
+    "explanation": "Option C: Runtime error"
+  },
+  {
+    "id": "py_48",
+    "type": "mcq",
+    "section": "Python",
+    "text": "Python is __________ language that can be used for a multitude of scientific and non-scientific computing purposes.",
+    "options": [
+      "Open-source",
+      "High level",
+      "Interpreter-based",
+      "All of the above"
+    ],
+    "answer": "All of the above",
+    "explanation": "Option D: All of the above"
+  },
+  {
+    "id": "py_49",
+    "type": "mcq",
+    "section": "Python",
+    "text": "Comments are __________ statements in a program.",
+    "options": [
+      "Non-executable",
+      "Executable",
+      "Both a) and b)",
+      "None of the above"
+    ],
+    "answer": "Non-executable",
+    "explanation": "Option A: Non-executable"
+  },
+  {
+    "id": "py_50",
+    "type": "mcq",
+    "section": "Python",
+    "text": "__________ is a user defined name given to a variable or a constant in a program.",
+    "options": [
+      "Keyword",
+      "Identifier",
+      "Data type",
+      "All of the above"
+    ],
+    "answer": "Identifier",
+    "explanation": "Option B: Identifier"
+  },
+  {
+    "id": "py_51",
+    "type": "mcq",
+    "section": "Python",
+    "text": "The process of identifying and removing errors from a computer program is called _______.",
+    "options": [
+      "Debugging",
+      "Mistakes",
+      "Error",
+      "None of the above"
+    ],
+    "answer": "Debugging",
+    "explanation": "Option A: Debugging"
+  },
+  {
+    "id": "py_52",
+    "type": "mcq",
+    "section": "Python",
+    "text": "Which of the following is an invalid variable naming syntax in Python?",
+    "options": [
+      "_my_var = 10",
+      "myVar_2 = 10",
+      "2nd_var = 10",
+      "MYVAR = 10"
+    ],
+    "answer": "2nd_var = 10",
+    "explanation": "Option C: 2nd_var = 10"
+  },
+  {
+    "id": "py_53",
+    "type": "mcq",
+    "section": "Python",
+    "text": "What is the output of the following string concatenation syntax: print(\"5\" + \"5\")?",
+    "options": [
+      "10",
+      "\"55\"",
+      "55 (as integer)",
+      "Syntax Error"
+    ],
+    "answer": "\"55\"",
+    "explanation": "Option B: \"55\""
+  },
+  {
+    "id": "py_54",
+    "type": "mcq",
+    "section": "Python",
+    "text": "What is the output of the following boolean syntax: print(bool(\"\"), bool(\"False\"))?",
+    "options": [
+      "False, False",
+      "True, True",
+      "False, True",
+      "True, False"
+    ],
+    "answer": "False, True",
+    "explanation": "Option C: False, True"
+  },
+  {
+    "id": "py_55",
+    "type": "mcq",
+    "section": "Python",
+    "text": "Which of the following is the correct syntax for floor division in Python?",
+    "options": [
+      "/",
+      "//",
+      "%",
+      "\\"
+    ],
+    "answer": "//",
+    "explanation": "Option B: //"
+  },
+  {
+    "id": "py_56",
+    "type": "mcq",
+    "section": "Python",
+    "text": "What is the output of the chained comparison syntax: print(1 < 5 < 10)?",
+    "options": [
+      "True",
+      "False",
+      "Compile Error",
+      "1"
+    ],
+    "answer": "True",
+    "explanation": "Option A: True"
+  },
+  {
+    "id": "py_57",
+    "type": "mcq",
+    "section": "Python",
+    "text": "Which keyword is used to test if a specific character or substring exists within a string?",
+    "options": [
+      "exists",
+      "has",
+      "in",
+      "contains"
+    ],
+    "answer": "in",
+    "explanation": "Option C: in"
+  },
+  {
+    "id": "py_58",
+    "type": "mcq",
+    "section": "Python",
+    "text": "What is the output of the range() function syntax in this loop: for i in range(2, 5): print(i, end=\"\")?",
+    "options": [
+      "2345",
+      "234",
+      "345",
+      "24"
+    ],
+    "answer": "234",
+    "explanation": "Option B: 234"
+  },
+  {
+    "id": "py_59",
+    "type": "mcq",
+    "section": "Python",
+    "text": "What is the result of the following string slicing syntax: print(\"Python\"[-3:])?",
+    "options": [
+      "Pyt",
+      "hon",
+      "tho",
+      "nohtyP"
+    ],
+    "answer": "hon",
+    "explanation": "Option B: hon"
+  },
+  {
+    "id": "py_60",
+    "type": "mcq",
+    "section": "Python",
+    "text": "What error is produced by the following variable unpacking syntax: x, y = 5, 10, 15?",
+    "options": [
+      "TypeError",
+      "SyntaxError",
+      "ValueError",
+      "NameError"
+    ],
+    "answer": "ValueError",
+    "explanation": "Option C: ValueError"
   }
 ]
