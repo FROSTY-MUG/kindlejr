@@ -3,9 +3,9 @@ import { getFallbackQuestions } from "../data/fallbackQuestions";
 const BASE_URL = "/api";
 
 // Single source of truth for the exam duration. The backend uses the identical
-// value (3600s) in handlers/get_state.go, so the countdown, the local recovery
+// value (4500s) in handlers/get_state.go, so the countdown, the local recovery
 // fallback and the server expiry check can never disagree.
-export const EXAM_DURATION_SECONDS = 3600; // 60 minutes
+export const EXAM_DURATION_SECONDS = 4500; // 75 minutes (60m + 15m buffer)
 export const TOTAL_QUESTIONS = 60;
 
 export interface StudentData {
@@ -54,6 +54,7 @@ export interface AdminLeaderboardEntry {
   timeTakenSeconds?: number;
   timeTakenFormatted?: string;
   isSubmitted: boolean;
+  cheated: boolean;
   registeredAt?: string;
 }
 
@@ -270,6 +271,7 @@ export async function apiGetQuestions(track: string): Promise<Question[]> {
 export async function apiSubmitQuiz(payload: {
   studentId: string;
   answers?: Record<string, string>;
+  cheated?: boolean;
 }): Promise<{
   status: string;
   studentId: string;
@@ -325,6 +327,7 @@ export async function apiSubmitQuiz(payload: {
         correctCount,
         incorrectCount,
         unattemptedCount,
+        cheated: payload.cheated || false,
       });
     }
 
@@ -391,6 +394,7 @@ export async function apiGetAdminLeaderboard(adminKey: string): Promise<{
               incorrectCount: st.incorrectCount || 0,
               unattemptedCount: st.unattemptedCount || 60,
               isSubmitted: !!st.isSubmitted,
+              cheated: !!st.cheated,
             });
           }
         } catch {}

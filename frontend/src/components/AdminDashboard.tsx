@@ -144,7 +144,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       "Unattempted",
       "Total Marks",
       "Time Taken",
-      "Submitted At"
+      "Submitted At",
+      "Cheated"
     ];
 
     const rows = leaderboard.map((s) => [
@@ -161,7 +162,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       s.unattemptedCount,
       s.totalScore,
       `"${s.timeTakenFormatted || "-"}"`,
-      `"${s.registeredAt || "-"}"`
+      `"${s.registeredAt || "-"}"`,
+      s.cheated ? "Yes" : "No"
     ]);
 
     const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
@@ -401,9 +403,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                         {/* Full Name */}
                         <td className="py-4 px-6 font-bold text-slate-900 flex items-center gap-3">
                           <span>{student.name}</span>
-                          {student.isSubmitted && (
+                          {student.isSubmitted && !student.cheated && (
                             <span className="text-xs uppercase font-black px-2.5 py-1 bg-emerald-100 text-emerald-700 border-2 border-emerald-200 rounded-lg">
                               Submitted
+                            </span>
+                          )}
+                          {student.cheated && (
+                            <span className="text-xs uppercase font-black px-2.5 py-1 bg-rose-100 text-rose-700 border-2 border-rose-200 rounded-lg animate-pulse">
+                              CHEATED
                             </span>
                           )}
                         </td>

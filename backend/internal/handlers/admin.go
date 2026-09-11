@@ -59,6 +59,7 @@ type StudentEntry struct {
 	TimeTakenSeconds   int    `json:"timeTakenSeconds"`
 	TimeTakenFormatted string `json:"timeTakenFormatted"`
 	IsSubmitted        bool   `json:"isSubmitted"`
+	Cheated            bool   `json:"cheated"`
 	RegisteredAt       string `json:"registeredAt,omitempty"`
 }
 
@@ -103,6 +104,7 @@ func GetLeaderboard(store *db.Store) http.HandlerFunc {
 				TimeTakenSeconds:   s.TimeTakenSeconds,
 				TimeTakenFormatted: s.TimeTakenFormatted,
 				IsSubmitted:        s.IsSubmitted,
+				Cheated:            s.Cheated,
 			}
 			if s.RegisteredAt != nil {
 				entry.RegisteredAt = s.RegisteredAt.Format(time.RFC3339)

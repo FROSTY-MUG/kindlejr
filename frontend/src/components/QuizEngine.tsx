@@ -147,7 +147,9 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [showWarningToast, setShowWarningToast] = useState<boolean>(false);
   const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
   const [isSplitScreenActive, setIsSplitScreenActive] = useState<boolean>(false);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(true);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(() =>
+    typeof document !== "undefined" ? !!document.fullscreenElement : false
+  );
   const [blockedActionNotice, setBlockedActionNotice] = useState<string>("");
 
   const { isOnline, queueOfflineAnswer } = useOfflineSync(student.studentId);
@@ -239,7 +241,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   };
 
   // Submit Final Answers
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (isCheated = false) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
@@ -257,6 +259,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       const res = await apiSubmitQuiz({
         studentId: student.studentId,
         answers: answers,
+        cheated: isCheated || violationCount >= 2,
       });
       onSubmitted({
         totalScore: res.totalScore,
@@ -264,7 +267,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         incorrectCount: res.incorrectCount,
         unattemptedCount: res.unattemptedCount,
         strikesCount: violationCount,
-        cheated: violationCount >= 2,
+        cheated: isCheated || violationCount >= 2,
       });
     } catch (err) {
       console.error("Submission failed:", err);
@@ -284,7 +287,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         if (newCount >= 2) {
           // Strike 2 ONLY: Close exam immediately and play loud alarm siren!
           playSecuritySiren();
-          handleSubmit();
+          handleSubmit(true);
         } else {
           // Strike 1: Show 1st & only warning modal
           setShowWarningToast(true);
@@ -455,12 +458,20 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     // Initial fullscreen & split-screen check
+    const initialFs = typeof document !== "undefined" && !!document.fullscreenElement;
+    setIsFullscreen(initialFs);
     checkDevToolsResize();
     try {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().then(() => {
+          setIsFullscreen(true);
+        }).catch(() => {
+          setIsFullscreen(false);
+        });
       }
-    } catch {}
+    } catch {
+      setIsFullscreen(false);
+    }
 
     const interval = setInterval(checkDevToolsResize, 1000);
 
@@ -753,7 +764,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
                 Continue Test
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={() => handleSubmit(false)}
                 disabled={isSubmitting}
                 className="py-2.5 px-5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow flex items-center gap-2"
               >

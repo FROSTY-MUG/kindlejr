@@ -23,6 +23,12 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
     setIsLoading(true);
     setErrorMsg("");
     try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen().catch((err) => {
+          console.warn("Fullscreen request failed", err);
+        });
+      }
+
       const rawQuestions = await apiGetQuestions(selectedTrack.toLowerCase());
       const orderArray = Array.from({ length: rawQuestions.length }, (_, i) => i);
       for (let i = orderArray.length - 1; i > 0; i--) {

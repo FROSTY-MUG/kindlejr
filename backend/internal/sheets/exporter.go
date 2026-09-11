@@ -36,14 +36,15 @@ const (
 	colTimeTaken   = 13
 	colSubmitted   = 14
 	colUpdated     = 15
-	columnCount    = 16
+	colCheated     = 16
+	columnCount    = 17
 )
 
 // Header is written to row 1 of the transcript sheet.
 var Header = []interface{}{
 	"Rank", "Name", "Student ID", "College Email", "Course", "Enrollment",
 	"Track", "Status", "Correct", "Incorrect", "Unattempted", "Total Marks",
-	"Elapsed (s)", "Time Taken", "Submitted At", "Last Updated",
+	"Elapsed (s)", "Time Taken", "Submitted At", "Last Updated", "Cheated",
 }
 
 // defaultSheetName is the tab the pipeline reads and writes.
@@ -384,6 +385,7 @@ func studentRow(rank int, s models.StudentState) []interface{} {
 		emptyDash(s.TimeTakenFormatted),
 		formatTime(s.SubmittedAt),
 		formatUpdated(s.UpdatedAt),
+		cheatedText(s),
 	}
 }
 
@@ -405,12 +407,22 @@ func elapsedSeconds(s models.StudentState) int {
 func status(s models.StudentState) string {
 	switch {
 	case s.IsSubmitted:
+		if s.Cheated {
+			return "Submitted (Cheated)"
+		}
 		return "Submitted"
 	case s.SelectedTrack != "":
 		return "In Progress"
 	default:
 		return "Registered"
 	}
+}
+
+func cheatedText(s models.StudentState) string {
+	if s.Cheated {
+		return "Yes"
+	}
+	return "No"
 }
 
 func unattempted(s models.StudentState) int {

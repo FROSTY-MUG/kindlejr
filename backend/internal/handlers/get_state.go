@@ -40,7 +40,7 @@ func GetState(store *db.Store) http.HandlerFunc {
 			return
 		}
 
-		remainingSeconds := 3600 // 60 minutes default
+		remainingSeconds := 4500 // 75 minutes (60m + 15m buffer)
 		timeExpired := false
 		disconnectedSeconds := 0
 		bufferExpired := false
@@ -60,7 +60,6 @@ func GetState(store *db.Store) http.HandlerFunc {
 					bufferExpired = true
 				}
 			}
-
 			if remainingSeconds <= 0 {
 				remainingSeconds = 0
 				timeExpired = true
