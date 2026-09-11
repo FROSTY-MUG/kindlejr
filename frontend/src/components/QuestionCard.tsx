@@ -19,11 +19,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const options = question.options || [];
 
   return (
-    <div className="bg-white/95 backdrop-blur-2xl rounded-2xl shadow-xl border-2 border-slate-200 p-6 sm:p-8 relative transition-all">
+    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-8 relative transition-all">
       {/* Header Info */}
-      <div className="flex items-center justify-between pb-4 mb-6 border-b-2 border-slate-100">
+      <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-200">
         <div className="flex items-center space-x-3">
-          <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="px-3.5 py-1 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
             {question.section || "Technical MCQ"}
           </span>
           <span className="text-xs text-slate-500 font-bold font-mono">
@@ -38,7 +38,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
       {/* Question Text */}
       <div className="mb-8">
-        <h3 className="text-base sm:text-lg font-bold text-slate-900 whitespace-pre-wrap leading-relaxed tracking-tight">
+        <h3 className="text-base sm:text-lg font-bold text-slate-800 whitespace-pre-wrap leading-relaxed tracking-tight">
           {question.text}
         </h3>
       </div>
@@ -55,18 +55,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <div
               key={idx}
               onClick={() => onAnswerChange(opt)}
-              className={`cursor-pointer rounded-2xl border-2 p-4 sm:p-5 transition-all flex items-center justify-between select-none ${
+              className={`cursor-pointer rounded-xl border-2 p-4 sm:p-5 transition-all flex items-center justify-between select-none ${
                 isSelected
-                  ? "border-blue-600 bg-blue-50/80 text-blue-950 shadow-md ring-2 ring-blue-600/20 font-semibold"
-                  : "border-slate-200 bg-slate-50/60 text-slate-800 hover:border-blue-300 hover:bg-slate-100/80 font-medium"
+                  ? "border-blue-600 bg-blue-50/80 text-slate-800 shadow-md ring-2 ring-blue-600/20 font-semibold"
+                  : "border-slate-200 bg-slate-50/60 text-slate-700 hover:border-blue-300 hover:bg-slate-100/80 font-medium"
               }`}
             >
               <div className="flex items-center space-x-3.5">
                 <span
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center font-black font-mono text-xs transition-all ${
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-black font-mono text-xs transition-all ${
                     isSelected
                       ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-white text-slate-600 border-2 border-slate-200"
+                      : "bg-white text-slate-600 border border-slate-200"
                   }`}
                 >
                   {letter}

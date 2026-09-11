@@ -29,7 +29,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
   return (
     <div className="max-w-xl mx-auto my-12 px-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 p-8 text-center relative overflow-hidden">
+      <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 p-8 text-center relative overflow-hidden">
         {/* Top Decorative Banner */}
         <div
           className={`absolute top-0 left-0 right-0 h-3 bg-gradient-to-r ${
@@ -53,10 +53,10 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           )}
         </div>
 
-        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+        <h2 className="text-2xl font-black text-slate-800 tracking-tight">
           {isDisqualified ? "Assessment Terminated (Strike 2 Triggered)" : "Assessment Submitted Successfully!"}
         </h2>
-        <p className="text-sm text-slate-600 mt-1">
+        <p className="text-sm text-slate-500 mt-1">
           {isDisqualified
             ? "Your assessment was automatically closed and submitted due to multiple proctoring/tab-switching violations."
             : "Thank you for participating in Kindle Jr 5.0. Your response has been securely recorded and synced to the cloud."}

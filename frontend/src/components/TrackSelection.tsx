@@ -48,24 +48,24 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
   return (
     <div className="w-full max-w-2xl mx-auto my-4">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+        <h2 className="text-3xl font-black text-slate-800 tracking-tight">
           Select Your Programming Track
         </h2>
-        <p className="text-slate-600 text-base mt-2">
+        <p className="text-slate-500 text-base mt-2">
           Welcome <strong className="text-blue-600">{student.name}</strong>! Choose the programming language track for your assessment.
         </p>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-xl border-2 border-slate-200 p-8 sm:p-10">
+      <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 p-8 sm:p-10">
         {/* Track Selection Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           {/* C Language Option */}
           <div
             onClick={() => setSelectedTrack("C")}
-            className={`cursor-pointer rounded-2xl border-2 p-6 transition-all relative overflow-hidden flex flex-col justify-between ${
+            className={`cursor-pointer rounded-xl border-2 p-6 transition-all relative overflow-hidden flex flex-col justify-between ${
               selectedTrack === "C"
-                ? "border-blue-600 bg-blue-50 shadow-md ring-2 ring-blue-600/20"
-                : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-slate-100"
+                ? "border-blue-600 bg-blue-50/80 shadow-md ring-2 ring-blue-600/20"
+                : "border-slate-200 bg-slate-50/60 hover:border-blue-300 hover:bg-slate-100/80"
             }`}
           >
             {selectedTrack === "C" && (
@@ -77,16 +77,16 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
               <div className="w-14 h-14 rounded-xl bg-blue-100 text-blue-600 border border-blue-200 flex items-center justify-center font-bold font-mono text-2xl mb-5">
                 C
               </div>
-              <h3 className="font-bold text-slate-900 text-xl">C Language Track</h3>
-              <p className="text-sm text-slate-600 mt-2 leading-relaxed font-medium">
+              <h3 className="font-bold text-slate-800 text-xl">C Language Track</h3>
+              <p className="text-sm text-slate-500 mt-2 leading-relaxed font-medium">
                 60 multiple choice questions covering C syntax, data types, operators, conditionals, and loops.
               </p>
             </div>
-            <div className="mt-5 pt-4 border-t-2 border-slate-200 flex items-center justify-between text-sm font-mono font-bold">
+            <div className="mt-5 pt-4 border-t border-slate-200 flex items-center justify-between text-sm font-mono font-bold">
               <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-xl border border-blue-200">
                 C Assessment
               </span>
-              <span className="px-3 py-1.5 bg-slate-900 text-white rounded-xl">
+              <span className="px-3 py-1.5 bg-slate-800 text-white rounded-xl">
                 60 Qs
               </span>
             </div>
@@ -95,10 +95,10 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
           {/* Python Track Option */}
           <div
             onClick={() => setSelectedTrack("Python")}
-            className={`cursor-pointer rounded-2xl border-2 p-6 transition-all relative overflow-hidden flex flex-col justify-between ${
+            className={`cursor-pointer rounded-xl border-2 p-6 transition-all relative overflow-hidden flex flex-col justify-between ${
               selectedTrack === "Python"
-                ? "border-blue-600 bg-blue-50 shadow-md ring-2 ring-blue-600/20"
-                : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-slate-100"
+                ? "border-blue-600 bg-blue-50/80 shadow-md ring-2 ring-blue-600/20"
+                : "border-slate-200 bg-slate-50/60 hover:border-blue-300 hover:bg-slate-100/80"
             }`}
           >
             {selectedTrack === "Python" && (
@@ -110,16 +110,16 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
               <div className="w-14 h-14 rounded-xl bg-blue-100 text-blue-600 border border-blue-200 flex items-center justify-center font-bold font-mono text-xl mb-5">
                 <Terminal className="w-7 h-7" />
               </div>
-              <h3 className="font-bold text-slate-900 text-xl">Python Track</h3>
-              <p className="text-sm text-slate-600 mt-2 leading-relaxed font-medium">
+              <h3 className="font-bold text-slate-800 text-xl">Python Track</h3>
+              <p className="text-sm text-slate-500 mt-2 leading-relaxed font-medium">
                 60 multiple choice questions covering Python core concepts, variables, operators, collections, and control structures.
               </p>
             </div>
-            <div className="mt-5 pt-4 border-t-2 border-slate-200 flex items-center justify-between text-sm font-mono font-bold">
+            <div className="mt-5 pt-4 border-t border-slate-200 flex items-center justify-between text-sm font-mono font-bold">
               <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-xl border border-blue-200">
                 Python Assessment
               </span>
-              <span className="px-3 py-1.5 bg-slate-900 text-white rounded-xl">
+              <span className="px-3 py-1.5 bg-slate-800 text-white rounded-xl">
                 60 Qs
               </span>
             </div>
@@ -127,12 +127,12 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
         </div>
 
         {/* Exam Structure Notice */}
-        <div className="bg-slate-50 rounded-2xl p-5 border-2 border-slate-200 mb-8 text-sm text-slate-600 space-y-2">
+        <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 mb-8 text-sm text-slate-600 space-y-2">
           <p className="font-bold text-slate-800 flex items-center gap-2">
             <Code2 className="w-5 h-5 text-blue-600" />
             Exam Structure Overview (60 Questions Total):
           </p>
-          <ul className="list-disc list-inside space-y-1 text-slate-700 pl-2 font-medium">
+          <ul className="list-disc list-inside space-y-1 text-slate-600 pl-2 font-medium">
             <li>Total: 60 Multiple-Choice Questions in {selectedTrack === "C" ? "C Language" : "Python"} (1 Mark Each)</li>
             <li>Randomized question sequence uniquely shuffled for every candidate.</li>
             <li>Strict <span className="font-bold text-blue-600">60-Minute Timer</span> starts automatically on Question 1 render.</li>
@@ -147,7 +147,7 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
         <button
           onClick={handleStartQuiz}
           disabled={isLoading}
-          className="w-full py-4 px-8 rounded-xl font-black text-lg text-white bg-pink-500 hover:bg-pink-600 shadow-xl flex items-center justify-center gap-2 group transition-all border-2 border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-4 px-8 rounded-xl font-black text-lg text-white bg-pink-500 hover:bg-pink-600 shadow-xl shadow-pink-500/20 flex items-center justify-center gap-2 group transition-all border-2 border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>

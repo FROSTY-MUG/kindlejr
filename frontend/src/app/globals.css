@@ -9,6 +9,16 @@
   }
 }
 
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
 /* Subtle Floating Cloud Keyframe Animation */
 @keyframes floatSlow {
   0% { transform: translateY(0px) translateX(0px); }

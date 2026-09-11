@@ -190,57 +190,59 @@ export default function Home() {
   }
 
   return (
-    <main className="relative min-h-[200vh] w-full bg-slate-50 text-slate-900 font-sans selection:bg-blue-200 overflow-x-hidden">
-      {/* Soft Blurred Graphic Era University Background & Parallax GEU Logo Backdrop */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <img
-          src="/geu-building.jpg"
-          alt="Graphic Era University"
-          className="w-full h-full object-cover blur-xl scale-110 opacity-20"
-        />
-        {/* Parallax Official Graphic Era Logo Backdrop */}
+    <main className="relative min-h-[200vh] w-full bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 overflow-x-hidden">
+      {/* Parallax Center Background Watermark - Isolated GEU Circular Crest */}
+      <div className="fixed inset-0 -z-10 flex items-center justify-center pointer-events-none overflow-hidden">
         <motion.div
-          style={{ y: logoY, scale: logoScale, rotate: logoRotate, opacity: logoOpacity }}
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{ y: logoY, scale: logoScale, rotate: logoRotate }}
+          className="flex items-center justify-center pointer-events-none"
         >
           <img
             src="/geu-logo.png"
-            alt="Graphic Era University Logo Watermark"
-            className="w-[85vw] max-w-[800px] h-auto object-contain blur-md drop-shadow-[0_0_80px_rgba(37,99,235,0.25)] select-none"
+            alt="Graphic Era University Crest Watermark"
+            className="w-[60vw] max-w-[600px] h-auto object-contain opacity-50 blur-[4px] select-none"
           />
         </motion.div>
-        <div className="absolute inset-0 bg-gradient-to-b from-sky-100/70 via-blue-50/50 to-slate-100/80" />
       </div>
 
-      {/* Fixed Header Bar with Official Graphic Era & IEEE Logo Branding */}
-      <header className="fixed top-0 left-0 w-full z-40 bg-white/95 backdrop-blur-xl border-b border-sky-200/80 px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
+      {/* Top-Left Header Logo - High Resolution GEU Crest & IEEE SB */}
+      <div className="absolute top-6 left-6 z-50 flex items-center">
+        <img
+          src="/header-logo.png"
+          alt="Graphic Era | IEEE SB"
+          className="h-14 w-auto object-contain"
+        />
+      </div>
+
+      {/* Fixed Header Bar for Scrolled Experience */}
+      <header className="fixed top-0 left-0 w-full z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-3.5">
           <img
             src="/header-logo.png"
             alt="Graphic Era | IEEE SB"
-            className="h-10 sm:h-12 w-auto object-contain rounded-xl bg-white p-1 border border-slate-200 shadow-sm"
+            className="h-14 w-auto object-contain"
           />
-          <div className="h-6 w-[1.5px] bg-sky-200 hidden sm:block" />
-          <span className="text-sm sm:text-base font-black tracking-tight text-slate-900 flex items-center gap-2">
+          <div className="h-6 w-[1.5px] bg-slate-200 hidden sm:block" />
+          <span className="text-sm sm:text-base font-black tracking-tight text-slate-800 flex items-center gap-2">
             <span className="text-blue-600 font-extrabold">IEEE GEU SB</span>
             <span className="text-slate-300 font-normal hidden sm:inline">|</span>
-            <span className="hidden sm:inline">Kindle Junior 5.0</span>
+            <span className="hidden sm:inline text-slate-800">Kindle Junior 5.0</span>
           </span>
         </div>
 
-        <div className="text-xs sm:text-sm uppercase tracking-widest font-mono text-sky-800 hidden sm:block font-bold bg-sky-50 px-3.5 py-1 rounded-full border border-sky-200">
+        <div className="text-xs sm:text-sm uppercase tracking-widest font-mono text-slate-600 hidden sm:block font-bold bg-slate-100 px-4 py-1.5 rounded-xl border border-slate-200">
           Graphic Era (Deemed to be University)
         </div>
       </header>
 
       {/* VIEWPORT 1: Hero Section */}
-      <section className="h-screen w-full flex flex-col items-center justify-between pt-24 pb-8 px-6 text-center relative z-10">
-        <div className="pt-4">
+      <section className="h-screen w-full flex flex-col items-center justify-between pt-28 pb-8 px-6 text-center relative z-10">
+        <div className="pt-2">
           <motion.div
             initial={{ opacity: 0, y: -15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white/95 border border-sky-200 backdrop-blur-md shadow-sm"
+            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white/90 border border-slate-200 backdrop-blur-xl shadow-sm"
           >
             <img src="/header-logo.png" alt="IEEE GEU Logo" className="h-6 w-auto object-contain" />
             <span className="text-blue-600 text-sm sm:text-base font-extrabold uppercase tracking-widest font-mono">
@@ -261,7 +263,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="space-y-2"
           >
-            <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight uppercase bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500 bg-clip-text text-transparent drop-shadow-sm">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight uppercase bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 bg-clip-text text-transparent drop-shadow-sm">
               IEEE GEU STUDENT BRANCH
             </h2>
             <div className="flex items-center justify-center gap-4 text-xs sm:text-sm uppercase font-mono text-blue-600 tracking-[0.35em] font-bold pt-1">
@@ -276,7 +278,7 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.93 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-slate-900 drop-shadow-sm"
+            className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-slate-800 drop-shadow-sm"
           >
             Kindle Junior <span className="text-blue-600 inline-block">5.0</span>
           </motion.h1>
@@ -286,7 +288,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-lg sm:text-2xl font-medium text-slate-700 tracking-wide max-w-2xl mx-auto"
+            className="text-lg sm:text-2xl font-medium text-slate-600 tracking-wide max-w-2xl mx-auto"
           >
             The Premier Technical & Aptitude Challenge of Graphic Era University
           </motion.p>
@@ -302,9 +304,9 @@ export default function Home() {
       {/* VIEWPORT 2: Pre-Registration & Interactive Portal */}
       <section className="min-h-screen w-full flex items-center justify-center p-4 sm:p-8 relative z-10 pt-20">
         {step === "register" && (
-           <motion.div
+          <motion.div
             style={{ y: regY, scale: regScale, opacity: regOpacity }}
-            className="w-full max-w-2xl bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl p-8 sm:p-12 shadow-2xl"
+            className="w-full max-w-2xl bg-white/90 backdrop-blur-xl border border-slate-200 rounded-3xl p-8 sm:p-12 shadow-2xl"
           >
             <RegistrationForm
               onComplete={handleRegistrationComplete}
@@ -319,14 +321,14 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="w-full max-w-3xl bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl p-6 sm:p-10 shadow-2xl"
+            className="w-full max-w-3xl bg-white/90 backdrop-blur-xl border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-2xl"
           >
             <TrackSelection student={student} onTrackInit={handleTrackInit} />
           </motion.div>
         )}
 
         {step === "quiz" && student && questions.length > 0 && (
-          <div className="w-full max-w-6xl">
+          <div className="w-full max-w-5xl">
             <QuizEngine
               student={student}
               questions={questions}
@@ -342,7 +344,7 @@ export default function Home() {
         {step === "submitted" && student && submissionDetails && (
           <div className="w-full max-w-xl">
             {recoveryNotice && (
-              <div className="mb-4 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800 shadow-sm">
+              <div className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800 shadow-sm">
                 {recoveryNotice}
               </div>
             )}

@@ -521,11 +521,27 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     persistCursor(gridIdx);
   };
 
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll the active palette node into center view smoothly
+  useEffect(() => {
+    if (carouselRef.current) {
+      const activeNode = document.getElementById(`palette-node-${currentIndex}`);
+      if (activeNode) {
+        activeNode.scrollIntoView({
+          behavior: "smooth",
+          inline: "center",
+          block: "nearest",
+        });
+      }
+    }
+  }, [currentIndex]);
+
   const answeredCount = Object.values(answers).filter((a) => a && a.trim() !== "").length;
 
   return (
     <div
-      className="max-w-5xl mx-auto my-6 px-4 pb-32 select-none"
+      className="max-w-5xl mx-auto my-6 px-4 pb-36 select-none"
       translate="no"
       spellCheck={false}
       data-gramm="false"
@@ -549,7 +565,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
             </div>
             <button
               onClick={requestEnterFullscreen}
-              className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-blue-600 hover:bg-blue-700 shadow-xl transition-all"
+              className="w-full py-4 px-6 rounded-xl font-black text-base text-white bg-blue-600 hover:bg-blue-700 shadow-xl transition-all"
             >
               Re-enter Full-Screen Mode
             </button>
@@ -559,7 +575,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
 
       {/* Floating Anti-Cheat Lockdown Toast */}
       {blockedActionNotice && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[110] bg-rose-600 text-white px-6 py-3.5 rounded-2xl shadow-2xl border-2 border-rose-400 flex items-center gap-3 animate-bounce">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[110] bg-rose-600 text-white px-6 py-3.5 rounded-xl shadow-2xl border-2 border-rose-400 flex items-center gap-3 animate-bounce">
           <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0" />
           <span className="text-sm font-black tracking-wide">{blockedActionNotice}</span>
         </div>
@@ -592,7 +608,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
             ) : (
               <button
                 onClick={() => setShowDevToolsModal(false)}
-                className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-rose-600 hover:bg-rose-700 shadow-xl transition-all"
+                className="w-full py-4 px-6 rounded-xl font-black text-base text-white bg-rose-600 hover:bg-rose-700 shadow-xl transition-all"
               >
                 Close & Return to Assessment
               </button>
@@ -636,7 +652,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
               <AlertTriangle className="w-10 h-10" />
             </div>
             <div>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-800">
                 FINAL WARNING: Tab Switching Detected
               </h2>
               <p className="text-base text-slate-600 mt-3 font-medium">
@@ -645,7 +661,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
             </div>
             <button
               onClick={() => setShowWarningToast(false)}
-              className="w-full py-4 px-6 rounded-2xl font-black text-base text-white bg-amber-500 hover:bg-amber-600 shadow-xl transition-all"
+              className="w-full py-4 px-6 rounded-xl font-black text-base text-white bg-amber-500 hover:bg-amber-600 shadow-xl transition-all"
             >
               I Understand • Continue Exam
             </button>
@@ -653,38 +669,32 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         </div>
       )}
 
-      {/* Part 3.4: Student Status & HUD */}
-      <div className="bg-white/95 backdrop-blur-2xl rounded-2xl p-6 border-2 border-slate-200 shadow-sm mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm uppercase tracking-widest font-semibold text-slate-500">
-          <div className="flex items-center space-x-4">
-            <div>
-              STUDENT: <span className="text-slate-900 font-bold ml-1">{student.name}</span>
-            </div>
-            <div className="h-5 w-[2px] bg-slate-200 hidden sm:block" />
-            <div>
-              ID: <span className="font-mono text-blue-600 font-bold ml-1">{student.studentId}</span>
-            </div>
+      {/* Top Header Card: Track Info, Timer & Pink Submit Button */}
+      <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 shadow-2xl mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm font-semibold text-slate-500">
+          <div className="flex items-center space-x-3.5">
+            <span className="text-slate-800 font-bold text-base">
+              {student.selectedTrack ? `${student.selectedTrack} Assessment` : "Kindle Jr 5.0"}
+            </span>
+            <div className="h-5 w-[1.5px] bg-slate-200 hidden sm:block" />
+            <span className="text-xs font-bold font-mono px-3 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
+              {totalQuestions} MCQs • 1 Mark Each
+            </span>
           </div>
 
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2 text-lg">
-              <span>ANSWERED:</span>
-              <span className="font-mono text-emerald-600 font-bold">
-                {answeredCount} / {totalQuestions}
-              </span>
-            </div>
+          <div className="flex items-center space-x-4">
             <Timer initialSeconds={remainingSeconds} onExpire={handleSubmit} />
             <button
               onClick={() => setShowConfirmModal(true)}
-              className="py-3 px-6 border-2 border-transparent rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all flex items-center gap-2"
+              className="py-3 px-6 rounded-xl font-black text-sm text-white bg-pink-500 hover:bg-pink-600 shadow-lg shadow-pink-500/20 transition-all flex items-center gap-2 border-2 border-transparent"
             >
-              <Send className="w-5 h-5" /> Submit
+              <Send className="w-4 h-4" /> Submit
             </button>
           </div>
         </div>
       </div>
 
-      {/* Part 3.5: Question Layout */}
+      {/* Question Layout */}
       {currentQuestion && (
         <QuestionCard
           question={currentQuestion}
@@ -695,44 +705,83 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         />
       )}
 
-      {/* Part 3.6: Bottom Navigation Floating Dock */}
-      <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-xl border-t-2 border-slate-200 p-4 z-40 shadow-lg">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <button
-            onClick={handlePrevious}
-            disabled={currentIndex === 0}
-            className={`py-3.5 px-6 rounded-xl text-sm font-bold border-2 transition-all flex items-center gap-2 ${
-              currentIndex === 0
-                ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
-                : "border-slate-300 bg-white hover:bg-slate-100 text-slate-700 shadow-sm"
-            }`}
-          >
-            <ArrowLeft className="w-4 h-4" /> Previous
-          </button>
+      {/* Part 3: High-Clarity Question Palette (Bottom Carousel) */}
+      <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200 z-50 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+        <div className="max-w-5xl mx-auto space-y-3">
+          {/* 3.2 Real-Time Status HUD */}
+          <div className="flex items-center justify-between px-1">
+            <div className="text-sm font-bold text-slate-700 truncate max-w-[50%]">
+              {student.name} | {student.studentId}
+            </div>
+            <div className="text-sm font-bold text-blue-600">
+              Answered: {answeredCount} • Left: {totalQuestions - answeredCount}
+            </div>
+          </div>
 
-          <span className="text-sm font-bold font-mono text-slate-600">
-            {currentIndex + 1} of {totalQuestions}
-          </span>
+          {/* 3.3 Horizontally Scrolling Question Nodes Carousel */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePrevious}
+              disabled={currentIndex === 0}
+              className={`py-3 px-4 rounded-xl text-sm font-bold border transition-all flex items-center gap-1.5 flex-shrink-0 ${
+                currentIndex === 0
+                  ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                  : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-sm"
+              }`}
+            >
+              <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
+            </button>
 
-          <button
-            onClick={handleNext}
-            disabled={currentIndex === totalQuestions - 1}
-            className={`py-3.5 px-6 rounded-xl text-sm font-bold border-2 transition-all flex items-center gap-2 ${
-              currentIndex === totalQuestions - 1
-                ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
-                : "border-blue-600 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
-            }`}
-          >
-            Next <ArrowRight className="w-4 h-4" />
-          </button>
+            <div
+              ref={carouselRef}
+              className="flex gap-3 overflow-x-auto scrollbar-hide items-center py-2 flex-1 scroll-smooth px-1"
+            >
+              {Array.from({ length: totalQuestions }, (_, i) => {
+                const qOriginalIdx = shuffledOrder[i] ?? i;
+                const q = questions[qOriginalIdx];
+                const isAnswered = Boolean(q && answers[q.id] && answers[q.id].trim() !== "");
+                const isCurrent = i === currentIndex;
+
+                let stateClass = "bg-white text-slate-400 border-slate-200 hover:border-blue-300";
+                if (isCurrent) {
+                  stateClass = "bg-blue-600 text-white border-blue-700 scale-110 shadow-lg z-10";
+                } else if (isAnswered) {
+                  stateClass = "bg-green-100 text-green-700 border-green-300";
+                }
+
+                return (
+                  <button
+                    key={i}
+                    id={`palette-node-${i}`}
+                    onClick={() => handleGridSelect(i)}
+                    className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-lg font-mono text-sm font-bold border transition-all duration-200 cursor-pointer ${stateClass}`}
+                  >
+                    {i + 1}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={handleNext}
+              disabled={currentIndex === totalQuestions - 1}
+              className={`py-3 px-4 rounded-xl text-sm font-bold border transition-all flex items-center gap-1.5 flex-shrink-0 ${
+                currentIndex === totalQuestions - 1
+                  ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                  : "border-blue-600 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+              }`}
+            >
+              <span className="hidden sm:inline">Next</span> <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border-2 border-slate-200">
-            <h3 className="text-xl font-black text-slate-900 mb-2">Confirm Final Submission</h3>
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200">
+            <h3 className="text-xl font-black text-slate-800 mb-2">Confirm Final Submission</h3>
             <p className="text-slate-600 text-sm mb-6 leading-relaxed">
               You have answered <strong>{answeredCount}</strong> out of{" "}
               <strong>{totalQuestions}</strong> questions. Once submitted, you cannot change your answers.
@@ -755,7 +804,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="py-2.5 px-5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow flex items-center gap-2"
+                className="py-2.5 px-5 rounded-xl text-sm font-bold bg-pink-500 hover:bg-pink-600 text-white shadow-lg shadow-pink-500/20 flex items-center gap-2 border-2 border-transparent"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 Confirm & Submit

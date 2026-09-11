@@ -76,21 +76,21 @@ export const Timer: React.FC<TimerProps> = ({ initialSeconds, onExpire }) => {
     <div
       className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl border text-sm font-mono tracking-tight font-bold transition-all ${
         isUrgent
-          ? "bg-rose-500/20 border-rose-500/50 text-rose-400 animate-pulse"
+          ? "bg-rose-50 border-rose-300 text-rose-600 animate-pulse shadow-sm"
           : isWarning
-          ? "bg-amber-500/20 border-amber-500/50 text-amber-400"
-          : "bg-slate-900 border-white/10 text-amber-400"
+          ? "bg-amber-50 border-amber-300 text-amber-700 shadow-sm"
+          : "bg-slate-100 border-slate-200 text-slate-800 shadow-sm"
       }`}
     >
       {isUrgent ? (
-        <AlertTriangle className="w-4 h-4 text-rose-400 animate-spin" />
+        <AlertTriangle className="w-4 h-4 text-rose-500 animate-spin" />
       ) : (
-        <Clock className="w-4 h-4 text-amber-400" />
+        <Clock className="w-4 h-4 text-blue-600" />
       )}
       <span>
         {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
       </span>
-      <span className="text-[10px] font-sans font-medium text-slate-400 uppercase tracking-wider hidden xs:inline">
+      <span className="text-[10px] font-sans font-semibold text-slate-500 uppercase tracking-wider hidden xs:inline">
         Remaining
       </span>
     </div>

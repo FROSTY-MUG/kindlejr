@@ -159,7 +159,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   return (
     <div className="w-full flex flex-col space-y-6">
       {/* Status Bar */}
-      <div className="flex items-center justify-between pb-4 border-b-2 border-slate-200 text-sm">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200 text-sm">
         <span className="font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-blue-500" /> Pre-Registration
         </span>
@@ -173,7 +173,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               State Saved
             </span>
           ) : (
-            <span className="text-slate-400">Auto-Save Active</span>
+            <span className="text-slate-500">Auto-Save Active</span>
           )}
         </div>
       </div>
@@ -181,7 +181,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-6 text-left">
         {/* Full Name */}
         <div>
-          <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">
+          <label className="block text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">
             Full Name *
           </label>
           <div className="relative">
@@ -193,7 +193,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               placeholder="e.g. Rahul Sharma"
               value={formData.name}
               onChange={handleChange}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 text-lg font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-lg font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
             />
           </div>
         </div>
@@ -201,7 +201,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
         {/* Student ID & Enrollment Number */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">
+            <label className="block text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">
               Student ID *
             </label>
             <div className="relative">
@@ -213,13 +213,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 placeholder="e.g. 20241010"
                 value={formData.studentId}
                 onChange={handleChange}
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 text-lg font-mono font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-lg font-mono font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">
+            <label className="block text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">
               Enrollment Num *
             </label>
             <div className="relative">
@@ -231,7 +231,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 placeholder="GEU/2024/8892"
                 value={formData.enrollmentNum}
                 onChange={handleChange}
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 text-lg font-mono font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-lg font-mono font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
               />
             </div>
           </div>
@@ -239,7 +239,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
         {/* College Email */}
         <div>
-          <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+          <label className="block text-sm font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center justify-between">
             <span>College Email *</span>
             {formData.collegeEmail.trim() && (
               <span
@@ -260,7 +260,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               placeholder="rahul.2024@geu.ac.in"
               value={formData.collegeEmail}
               onChange={handleChange}
-              className={`w-full pl-12 pr-4 py-4 bg-slate-50 border-2 rounded-xl text-slate-900 text-lg font-medium focus:outline-none transition-colors ${
+              className={`w-full pl-12 pr-4 py-4 bg-slate-50 border rounded-xl text-slate-800 text-lg font-medium focus:outline-none transition-colors ${
                 formData.collegeEmail.trim()
                   ? isEmailValid
                     ? "border-emerald-400 focus:border-emerald-500 focus:bg-white"
@@ -273,7 +273,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
         {/* Course Selector */}
         <div>
-          <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">
+          <label className="block text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">
             Course *
           </label>
           <div className="relative">
@@ -282,7 +282,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               name="courseSelection"
               value={formData.courseSelection}
               onChange={handleChange}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 text-lg font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none cursor-pointer"
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-lg font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none cursor-pointer"
             >
               <option value="B.Tech CSE">B.Tech - CSE</option>
               <option value="B.Tech AI/ML">B.Tech - AI/ML</option>
@@ -305,7 +305,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               placeholder="e.g. B.Sc Computer Science"
               value={formData.customCourse}
               onChange={handleChange}
-              className="w-full px-6 py-4 bg-blue-50 border-2 border-blue-200 rounded-xl text-blue-900 text-lg font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              className="w-full px-6 py-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-lg font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
             />
           </div>
         )}
@@ -316,7 +316,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
             type="button"
             onClick={handleResumeSession}
             disabled={isLookupLoading}
-            className="py-4 px-6 rounded-xl text-lg font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 transition-all flex items-center justify-center gap-2"
+            className="py-4 px-6 rounded-xl text-lg font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all flex items-center justify-center gap-2"
           >
             {isLookupLoading ? (
               <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
@@ -337,7 +337,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
         </div>
 
         {lookupError && (
-          <p className="text-sm text-rose-500 font-bold text-center mt-2 bg-rose-50 py-2 rounded-lg border border-rose-200">
+          <p className="text-sm text-rose-500 font-bold text-center mt-2 bg-rose-50 py-2 rounded-xl border border-rose-200">
             {lookupError}
           </p>
         )}
