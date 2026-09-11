@@ -74,6 +74,8 @@ export async function GET(req: NextRequest) {
         timeTakenFormatted: s.timeTakenFormatted || "-",
         isSubmitted: !!s.isSubmitted,
         registeredAt: s.registeredAt || "",
+        strikesCount: s.strikesCount || 0,
+        cheated: !!(s.cheated || (s.strikesCount && s.strikesCount >= 2)),
       };
     });
 

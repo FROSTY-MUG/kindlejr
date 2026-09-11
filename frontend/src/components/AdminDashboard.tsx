@@ -135,9 +135,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       "Full Name",
       "Student ID",
       "College Email",
-      "Course",
       "Enrollment Number",
+      "Course",
       "Track",
+      "Strikes",
+      "Integrity Status",
       "Status",
       "Correct",
       "Incorrect",
@@ -152,9 +154,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       `"${(s.name || "").replace(/"/g, '""')}"`,
       `"${(s.studentId || "").replace(/"/g, '""')}"`,
       `"${(s.collegeEmail || "").replace(/"/g, '""')}"`,
-      `"${(s.course || "").replace(/"/g, '""')}"`,
       `"${(s.enrollmentNum || "").replace(/"/g, '""')}"`,
+      `"${(s.course || "").replace(/"/g, '""')}"`,
       `"${(s.selectedTrack || "-").replace(/"/g, '""')}"`,
+      s.strikesCount || 0,
+      s.cheated || (s.strikesCount && s.strikesCount >= 2) ? "Disqualified (Cheated)" : s.strikesCount === 1 ? "1 Warning" : "Clean",
       s.isSubmitted ? "Submitted" : "In Progress",
       s.correctCount,
       s.incorrectCount,
@@ -199,33 +203,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
             className="py-2 px-4 rounded-xl text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border-2 border-slate-200 transition-all flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" />
-            Exit Telemetry
+            Exit Portal
           </button>
         </div>
       </header>
 
-      {/* Main Grid Layout (grid-cols-12 gap-6 p-8) */}
-      <div className="max-w-7xl mx-auto p-4 sm:p-8 space-y-8">
-        {/* Export Banner Alert */}
-        {exportMessage && (
-          <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-700 px-6 py-4 rounded-2xl text-sm font-bold flex items-center gap-3 animate-in fade-in shadow-sm">
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-            <span>{exportMessage}</span>
-          </div>
-        )}
-
-        {/* Analytics Metric Cards (Top Row) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: Active Participants */}
+      {/* Main Content Dashboard Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        {/* Metric Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Card 1: Registered Students */}
           <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 shadow-md flex items-center justify-between">
             <div>
               <p className="text-sm uppercase tracking-widest font-bold text-slate-500 mb-2">
-                Active Participants
+                Registered Candidates
               </p>
-              <h3 className="font-mono text-4xl sm:text-5xl font-black text-blue-600">
+              <h3 className="font-mono text-4xl sm:text-5xl font-black text-slate-900">
                 {totalStudents}
               </h3>
-              <p className="text-xs font-semibold text-slate-400 mt-2 uppercase tracking-wide">Registered & Live</p>
+              <p className="text-xs font-semibold text-blue-600 mt-2 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5" /> Synchronized in real-time
+              </p>
             </div>
             <div className="w-16 h-16 rounded-2xl bg-blue-50 border-2 border-blue-100 flex items-center justify-center text-blue-600">
               <Users className="w-8 h-8" />
@@ -236,7 +234,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
           <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 shadow-md flex items-center justify-between">
             <div>
               <p className="text-sm uppercase tracking-widest font-bold text-slate-500 mb-2">
-                Average Score
+                Mean Exam Score
               </p>
               <h3 className="font-mono text-4xl sm:text-5xl font-black text-emerald-600">
                 {avgScore} <span className="text-lg text-slate-400 font-sans font-bold">/ 60</span>
@@ -298,7 +296,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                 title="Download Excel / CSV file"
               >
                 <Download className="w-3.5 h-3.5" />
-                Export Excel
+                Export CSV
               </button>
 
               <a
@@ -315,16 +313,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
           </div>
         </div>
 
-        {/* Live Scoreboard Table Container */}
-        <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 shadow-xl space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b-2 border-slate-100">
+        {exportMessage && (
+          <div className="mb-6 p-4 rounded-xl bg-blue-50 border-2 border-blue-200 text-blue-800 text-sm font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-blue-600" />
+            {exportMessage}
+          </div>
+        )}
+
+        {/* Live Leaderboard Section */}
+        <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b-2 border-slate-200 gap-4">
             <div>
-              <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                <Trophy className="w-7 h-7 text-amber-500" />
-                <span>Live Leaderboard Telemetry</span>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <Trophy className="w-7 h-7 text-amber-500" /> Live Assessment Leaderboard
               </h2>
-              <p className="text-sm font-medium text-slate-500 mt-2">
-                Auto-refreshing every 5 seconds. Shows real-time partial scores as students type.
+              <p className="text-xs text-slate-500 mt-1 font-semibold">
+                Sorted strictly by <strong className="text-blue-600">Total Score (DESC)</strong> $\rightarrow$ <strong className="text-blue-600">Time Taken (ASC)</strong>.
               </p>
             </div>
 
@@ -345,52 +349,61 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
           </div>
 
           {/* Scoreboard Table */}
-          <div className="overflow-x-auto rounded-xl border-2 border-slate-200">
-            <table className="w-full text-base text-left text-slate-700">
-              <thead className="text-sm font-bold uppercase tracking-widest text-slate-500 bg-slate-50 border-b-2 border-slate-200 font-mono">
+          <div className="overflow-x-auto rounded-xl border-2 border-slate-200 mt-6">
+            <table className="w-full text-sm text-left text-slate-700">
+              <thead className="text-xs font-bold uppercase tracking-wider text-slate-600 bg-slate-100 border-b-2 border-slate-200 font-mono">
                 <tr>
-                  <th className="py-4 px-6">Rank</th>
-                  <th className="py-4 px-6">Full Name</th>
-                  <th className="py-4 px-6">Student ID</th>
-                  <th className="py-4 px-6">Course</th>
-                  <th className="py-4 px-6 text-center">Correct</th>
-                  <th className="py-4 px-6 text-center">Incorrect</th>
-                  <th className="py-4 px-6 text-center">Unattempted</th>
-                  <th className="py-4 px-6 text-center">Time Taken</th>
-                  <th className="py-4 px-6 text-right">Total Marks</th>
+                  <th className="py-3.5 px-4 text-center">Rank</th>
+                  <th className="py-3.5 px-4">Full Name</th>
+                  <th className="py-3.5 px-4">Student ID</th>
+                  <th className="py-3.5 px-4">College Email</th>
+                  <th className="py-3.5 px-4">Enrollment</th>
+                  <th className="py-3.5 px-4">Course</th>
+                  <th className="py-3.5 px-3 text-center">Track</th>
+                  <th className="py-3.5 px-3 text-center">Strikes</th>
+                  <th className="py-3.5 px-3 text-center">Correct</th>
+                  <th className="py-3.5 px-3 text-center">Incorrect</th>
+                  <th className="py-3.5 px-3 text-center">Unattempted</th>
+                  <th className="py-3.5 px-4 text-center">Time Taken</th>
+                  <th className="py-3.5 px-4 text-right">Score</th>
                 </tr>
               </thead>
-              <tbody className="divide-y-2 divide-slate-100 font-sans font-medium">
+              <tbody className="divide-y-2 divide-slate-100 font-sans font-medium text-xs sm:text-sm">
                 {leaderboard.length > 0 ? (
                   leaderboard.map((student) => {
                     const isTop1 = student.rank === 1;
                     const isTop2 = student.rank === 2;
                     const isTop3 = student.rank === 3;
+                    const strikes = student.strikesCount || 0;
+                    const isDisqualified = !!(student.cheated || strikes >= 2);
 
                     return (
                       <tr
                         key={student.studentId}
-                        className={`transition-colors hover:bg-slate-50 ${isTop1
-                          ? "bg-amber-50/50 border-l-4 border-l-amber-500"
-                          : isTop2
+                        className={`transition-colors hover:bg-slate-50 ${
+                          isDisqualified
+                            ? "bg-rose-50/60 border-l-4 border-l-rose-500"
+                            : isTop1
+                            ? "bg-amber-50/50 border-l-4 border-l-amber-500"
+                            : isTop2
                             ? "bg-slate-100/50 border-l-4 border-l-slate-400"
                             : isTop3
-                              ? "bg-amber-100/30 border-l-4 border-l-amber-700"
-                              : ""
-                          }`}
+                            ? "bg-amber-100/30 border-l-4 border-l-amber-700"
+                            : ""
+                        }`}
                       >
                         {/* Rank */}
-                        <td className="py-4 px-6 font-mono font-black text-lg">
+                        <td className="py-3.5 px-4 text-center font-mono font-black text-base">
                           {isTop1 ? (
-                            <span className="px-3 py-1 bg-amber-100 text-amber-700 border-2 border-amber-200 rounded-xl">
+                            <span className="px-2.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-300 rounded-lg">
                               🥇 #1
                             </span>
                           ) : isTop2 ? (
-                            <span className="px-3 py-1 bg-slate-200 text-slate-700 border-2 border-slate-300 rounded-xl">
+                            <span className="px-2.5 py-0.5 bg-slate-200 text-slate-700 border border-slate-300 rounded-lg">
                               🥈 #2
                             </span>
                           ) : isTop3 ? (
-                            <span className="px-3 py-1 bg-amber-50 text-amber-800 border-2 border-amber-200 rounded-xl">
+                            <span className="px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-300 rounded-lg">
                               🥉 #3
                             </span>
                           ) : (
@@ -399,45 +412,85 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                         </td>
 
                         {/* Full Name */}
-                        <td className="py-4 px-6 font-bold text-slate-900 flex items-center gap-3">
-                          <span>{student.name}</span>
-                          {student.isSubmitted && (
-                            <span className="text-xs uppercase font-black px-2.5 py-1 bg-emerald-100 text-emerald-700 border-2 border-emerald-200 rounded-lg">
-                              Submitted
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                          <div className="flex items-center gap-2">
+                            <span>{student.name}</span>
+                            {student.isSubmitted ? (
+                              <span className="text-[10px] uppercase font-black px-1.5 py-0.5 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded">
+                                Submitted
+                              </span>
+                            ) : (
+                              <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-200 rounded">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Student ID */}
+                        <td className="py-3.5 px-4 font-mono text-blue-600 font-bold">
+                          {student.studentId}
+                        </td>
+
+                        {/* College Email */}
+                        <td className="py-3.5 px-4 font-mono text-xs text-slate-600">
+                          {student.collegeEmail || "-"}
+                        </td>
+
+                        {/* Enrollment Number */}
+                        <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700">
+                          {student.enrollmentNum || "-"}
+                        </td>
+
+                        {/* Course */}
+                        <td className="py-3.5 px-4 text-xs text-slate-600 font-semibold">{student.course}</td>
+
+                        {/* Track */}
+                        <td className="py-3.5 px-3 text-center font-bold text-xs">
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-800 rounded border border-slate-200">
+                            {student.selectedTrack || "-"}
+                          </span>
+                        </td>
+
+                        {/* Strikes */}
+                        <td className="py-3.5 px-3 text-center">
+                          {isDisqualified ? (
+                            <span className="px-2 py-0.5 bg-rose-100 text-rose-700 font-bold text-xs rounded border border-rose-300" title="Disqualified on Strike 2">
+                              ⛔ 2 (Cheated)
+                            </span>
+                          ) : strikes === 1 ? (
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold text-xs rounded border border-amber-300" title="1 Warning">
+                              ⚠️ 1
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-semibold text-xs rounded border border-emerald-200">
+                              ✓ 0
                             </span>
                           )}
                         </td>
 
-                        {/* Student ID */}
-                        <td className="py-4 px-6 font-mono text-blue-600 font-bold">
-                          {student.studentId}
-                        </td>
-
-                        {/* Course */}
-                        <td className="py-4 px-6 text-sm text-slate-500 font-semibold">{student.course}</td>
-
                         {/* Correct Count */}
-                        <td className="py-4 px-6 text-center font-mono font-black text-emerald-600">
+                        <td className="py-3.5 px-3 text-center font-mono font-black text-emerald-600">
                           {student.correctCount}
                         </td>
 
                         {/* Incorrect Count */}
-                        <td className="py-4 px-6 text-center font-mono font-black text-rose-600">
+                        <td className="py-3.5 px-3 text-center font-mono font-black text-rose-600">
                           {student.incorrectCount}
                         </td>
 
                         {/* Unattempted Count */}
-                        <td className="py-4 px-6 text-center font-mono font-bold text-slate-400">
+                        <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-400">
                           {student.unattemptedCount}
                         </td>
 
                         {/* Time Taken */}
-                        <td className="py-4 px-6 text-center font-mono text-sm text-blue-500 font-bold">
+                        <td className="py-3.5 px-4 text-center font-mono text-xs text-blue-600 font-bold">
                           {student.timeTakenFormatted || "-"}
                         </td>
 
                         {/* Total Score / Marks */}
-                        <td className="py-4 px-6 text-right font-mono text-xl font-black text-slate-900">
+                        <td className="py-3.5 px-4 text-right font-mono text-lg font-black text-slate-900">
                           {student.totalScore}
                         </td>
                       </tr>
@@ -445,7 +498,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-500 font-mono font-bold text-sm bg-slate-50">
+                    <td colSpan={13} className="py-12 text-center text-slate-500 font-mono font-bold text-sm bg-slate-50">
                       No active telemetry data available yet.
                     </td>
                   </tr>

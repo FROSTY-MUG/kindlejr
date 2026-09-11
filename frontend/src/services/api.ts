@@ -55,6 +55,8 @@ export interface AdminLeaderboardEntry {
   timeTakenFormatted?: string;
   isSubmitted: boolean;
   registeredAt?: string;
+  strikesCount?: number;
+  cheated?: boolean;
 }
 
 export async function fetchWithRetry(
