@@ -353,6 +353,7 @@ export default function Home() {
               incorrectCount={submissionDetails.incorrectCount}
               unattemptedCount={submissionDetails.unattemptedCount}
               totalQuestions={TOTAL_QUESTIONS}
+              strikesCount={submissionDetails.strikesCount}
             />
           </div>
         )}

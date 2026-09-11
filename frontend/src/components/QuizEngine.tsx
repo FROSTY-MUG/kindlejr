@@ -17,6 +17,8 @@ export interface SubmissionResult {
   correctCount: number;
   incorrectCount: number;
   unattemptedCount: number;
+  strikesCount?: number;
+  cheated?: boolean;
 }
 
 interface QuizEngineProps {
@@ -29,7 +31,23 @@ interface QuizEngineProps {
   onSubmitted: (result: SubmissionResult) => void;
 }
 
-// Synthesizes a loud, high-visibility security siren via Web Audio API
+const ASCII_SECURITY_BANNER = `
+================================================================================
+ ____   ___    _   _  ___ _____   _____ ______   __  _____ ___     ____ _   _ _____    _  _____ 
+|  _ \\ / _ \\  | \\ | |/ _ \\_   _| |_   _|  _ \\ \\ / / |_   _/ _ \\   / ___| | | | ____|  / \\|_   _|
+| | | | | | | |  \\| | | | || |     | | | |_) \\ V /    | || | | | | |   | |_| |  _|   / _ \\ | |  
+| |_| | |_| | | |\\  | |_| || |     | | |  _ < | |     | || |_| | | |___|  _  | |___ / ___ \\| |  
+|____/ \\___/  |_| \\_|\\___/ |_|     |_| |_| \\_\\|_|     |_| \\___/   \\____|_| |_|_____/_/   \\_\\_|  
+                                                                                               
+ __   _____  _   _      _    ____  _____    ____    _   _  ____ _   _ _____                     
+ \\ \\ / / _ \\| | | |    / \\  |  _ \\| ____|  / ___|  / \\ | | | | | | | |_   _|                    
+  \\ V / | | | | | |   / _ \\ | |_) |  _|   | |     / _ \\| | | | | | | | | |                      
+   | || |_| | |_| |  / ___ \\|  _ <| |___  | |___ / ___ | |_| | |_| | | | |                      
+   |_| \\___/ \\___/  /_/   \\_\\_| \\_\\_____|  \\____/_/   \\_\\____/\\___/  |_|                      
+================================================================================
+`;
+
+// Synthesizes a blaring, forced loud security alarm siren via Web Audio API at maximum gain
 function playSecuritySiren() {
   try {
     const AudioContextClass =
@@ -40,13 +58,18 @@ function playSecuritySiren() {
       ctx.resume();
     }
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    // Dual Oscillators for piercing acoustic penetration
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gainNode = ctx.createGain();
 
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc1.type = "sawtooth";
+    osc2.type = "square";
 
-    // Modulate frequency to create an unmistakable security alarm siren
+    osc1.frequency.setValueAtTime(850, ctx.currentTime);
+    osc2.frequency.setValueAtTime(1400, ctx.currentTime);
+
+    // Rapid alternating siren modulation (600Hz <-> 1500Hz)
     let isHigh = false;
     const interval = setInterval(() => {
       if (ctx.state === "closed") {
@@ -54,26 +77,34 @@ function playSecuritySiren() {
         return;
       }
       const now = ctx.currentTime;
-      osc.frequency.setValueAtTime(isHigh ? 600 : 1200, now);
+      const f1 = isHigh ? 650 : 1350;
+      const f2 = isHigh ? 1100 : 1800;
+      osc1.frequency.setValueAtTime(f1, now);
+      osc2.frequency.setValueAtTime(f2, now);
       isHigh = !isHigh;
-    }, 180);
+    }, 150);
 
-    gain.gain.setValueAtTime(0.9, ctx.currentTime);
+    // Maximum gain (1.0 = full volume amplitude)
+    gainNode.gain.setValueAtTime(1.0, ctx.currentTime);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    gainNode.connect(ctx.destination);
 
-    // Play continuously for 45 seconds
+    osc1.start();
+    osc2.start();
+
+    // Sound continuously for 60 seconds
     setTimeout(() => {
       clearInterval(interval);
       try {
-        osc.stop();
+        osc1.stop();
+        osc2.stop();
         ctx.close();
       } catch {}
-    }, 45000);
+    }, 60000);
   } catch (err) {
-    console.warn("Audio Context Siren failed:", err);
+    console.warn("Audio Siren failed:", err);
   }
 }
 
@@ -213,6 +244,8 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         correctCount: res.correctCount,
         incorrectCount: res.incorrectCount,
         unattemptedCount: res.unattemptedCount,
+        strikesCount: violationCount,
+        cheated: violationCount >= 2,
       });
     } catch (err) {
       console.error("Submission failed:", err);
@@ -222,19 +255,19 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, student.studentId, answers, onSubmitted]);
+  }, [isSubmitting, student.studentId, answers, violationCount, onSubmitted]);
 
-  // Anti-Cheating Event Listeners (Tab Switching & Focus Loss)
+  // Anti-Cheating Event Listeners (Tab Switching & Focus Loss - Strict 2-Strike Rule)
   useEffect(() => {
     const handleViolation = () => {
       setViolationCount((prev) => {
         const newCount = prev + 1;
         if (newCount >= 2) {
-          // Strike 2: Close exam immediately and play loud alarm siren!
+          // Strike 2 ONLY: Close exam immediately and play loud alarm siren!
           playSecuritySiren();
           handleSubmit();
         } else {
-          // Strike 1: Show big warning modal
+          // Strike 1: Show 1st & only warning modal
           setShowWarningToast(true);
         }
         return newCount;
@@ -315,13 +348,22 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     };
 
     // DevTools detection via F12, Shortcuts, and Window anomaly
+    const triggerDevToolsAlert = (triggerName: string) => {
+      try {
+        // Output large ASCII warning banner to console
+        const nativeLog = console.warn || console.log;
+        nativeLog.call(console, `%c${ASCII_SECURITY_BANNER}`, "color: #ef4444; font-weight: bold; font-family: monospace; font-size: 11px;");
+      } catch {}
+      setShowDevToolsModal(true);
+      notifyBlocked(triggerName);
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
       if (e.key === "F12") {
         e.preventDefault();
-        setShowDevToolsModal(true);
-        notifyBlocked("DevTools Access (F12)");
+        triggerDevToolsAlert("DevTools Access (F12)");
         return;
       }
 
@@ -335,8 +377,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         const key = e.key.toLowerCase();
         if (e.shiftKey && (key === "i" || key === "j" || key === "c" || key === "k")) {
           e.preventDefault();
-          setShowDevToolsModal(true);
-          notifyBlocked("DevTools Shortcut");
+          triggerDevToolsAlert("DevTools Shortcut");
           return;
         }
 

@@ -9,6 +9,7 @@ interface SubmissionViewProps {
   incorrectCount?: number;
   unattemptedCount?: number;
   totalQuestions?: number;
+  strikesCount?: number;
 }
 
 export const SubmissionView: React.FC<SubmissionViewProps> = ({
@@ -18,27 +19,70 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   incorrectCount,
   unattemptedCount,
   totalQuestions = 60,
+  strikesCount = 0,
 }) => {
   const calcCorrect = correctCount !== undefined ? correctCount : score;
   const calcUnattempted = unattemptedCount !== undefined ? unattemptedCount : 0;
   const calcIncorrect = incorrectCount !== undefined ? incorrectCount : totalQuestions - calcCorrect - calcUnattempted;
+  const finalStrikes = strikesCount || student.strikesCount || 0;
+  const isDisqualified = finalStrikes >= 2;
 
   return (
     <div className="max-w-xl mx-auto my-12 px-4">
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 p-8 text-center relative overflow-hidden">
         {/* Top Decorative Banner */}
-        <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500" />
+        <div
+          className={`absolute top-0 left-0 right-0 h-3 bg-gradient-to-r ${
+            isDisqualified
+              ? "from-rose-600 via-red-600 to-amber-500"
+              : "from-blue-600 via-indigo-600 to-emerald-500"
+          }`}
+        />
 
-        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner ring-8 ring-emerald-50">
-          <CheckCircle2 className="w-12 h-12" />
+        <div
+          className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner ring-8 ${
+            isDisqualified
+              ? "bg-rose-100 text-rose-600 ring-rose-50"
+              : "bg-emerald-100 text-emerald-600 ring-emerald-50"
+          }`}
+        >
+          {isDisqualified ? (
+            <X className="w-12 h-12" />
+          ) : (
+            <CheckCircle2 className="w-12 h-12" />
+          )}
         </div>
 
         <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Assessment Submitted Successfully!
+          {isDisqualified ? "Assessment Terminated (Strike 2 Triggered)" : "Assessment Submitted Successfully!"}
         </h2>
         <p className="text-sm text-slate-600 mt-1">
-          Thank you for participating in <strong className="text-slate-800">Kindle Jr 5.0</strong>. Your response has been securely recorded and synced to the cloud.
+          {isDisqualified
+            ? "Your assessment was automatically closed and submitted due to multiple proctoring/tab-switching violations."
+            : "Thank you for participating in Kindle Jr 5.0. Your response has been securely recorded and synced to the cloud."}
         </p>
+
+        {/* Proctoring Integrity & Strike Notification Line */}
+        <div className="my-4">
+          {isDisqualified ? (
+            <div className="p-3.5 bg-rose-50 border-2 border-rose-400 rounded-2xl text-rose-800 text-xs font-bold flex flex-col items-center gap-1 shadow-sm animate-pulse">
+              <span className="text-sm font-black uppercase tracking-wider text-rose-600">
+                ⚠️ Proctoring Status: Disqualified (Cheating / Tab Switch Detected)
+              </span>
+              <span className="text-rose-700">
+                Total Strikes Received: <strong className="text-rose-900 font-mono text-sm underline">{finalStrikes} / 2</strong> (Exam auto-submitted on Strike 2)
+              </span>
+            </div>
+          ) : finalStrikes === 1 ? (
+            <div className="p-3 bg-amber-50 border-2 border-amber-300 rounded-2xl text-amber-800 text-xs font-semibold flex items-center justify-center gap-2">
+              <span>⚠️ 1 Proctoring Warning recorded during session.</span>
+            </div>
+          ) : (
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700 text-xs font-semibold flex items-center justify-center gap-2">
+              <span>🛡️ 0 Proctoring Strikes — 100% Clean Exam Integrity Verified.</span>
+            </div>
+          )}
+        </div>
 
         {/* Score Card */}
         <div className="my-6 bg-gradient-to-br from-slate-50 to-blue-50/50 rounded-2xl p-6 border border-slate-200/80 shadow-sm">
