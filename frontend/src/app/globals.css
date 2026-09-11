@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased min-h-screen selection:bg-blue-100 selection:text-blue-700;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+}
+
+/* Subtle Floating Cloud Keyframe Animation */
+@keyframes floatSlow {
+  0% { transform: translateY(0px) translateX(0px); }
+  50% { transform: translateY(-12px) translateX(8px); }
+  100% { transform: translateY(0px) translateX(0px); }
+}
+
+@keyframes floatReverse {
+  0% { transform: translateY(0px) translateX(0px); }
+  50% { transform: translateY(14px) translateX(-10px); }
+  100% { transform: translateY(0px) translateX(0px); }
+}
+
+.cloud-anim-1 {
+  animation: floatSlow 18s ease-in-out infinite;
+}
+
+.cloud-anim-2 {
+  animation: floatReverse 22s ease-in-out infinite;
+}

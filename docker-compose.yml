@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-kindle-jr-5-db}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      - GOOGLE_SHEETS_CREDENTIALS_BASE64=${GOOGLE_SHEETS_CREDENTIALS_BASE64:-}
+      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID:-}
+      - DATA_PATH=./data
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api
+    depends_on:
+      - backend
+    restart: always
