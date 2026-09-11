@@ -38,8 +38,7 @@ func getSheetsService(ctx context.Context) (*sheets.Service, string, error) {
 	return srv, spreadsheetID, nil
 }
 
-// EnsureHeaders checks if the header row exists in Sheet1!A1:M1 and creates it if absent.
-// Should be called once on server startup.
+// EnsureHeaders checks if the header row exists in Sheet1!A1:N1 and creates it if absent.
 func EnsureHeaders(ctx context.Context) error {
 	srv, spreadsheetID, err := getSheetsService(ctx)
 	if err != nil {
@@ -48,17 +47,17 @@ func EnsureHeaders(ctx context.Context) error {
 	}
 
 	headers := []interface{}{
-		"Timestamp", "Name", "Personal Email", "College Email", "Course",
-		"Student ID", "Enrollment Num", "Track", "Correct", "Incorrect",
-		"Unattempted", "Total Score", "Rank",
+		"Entry Time", "Name", "Student ID", "College Email", "Course",
+		"Enrollment Num", "Track", "Status", "Attempted", "Unattempted",
+		"Time Taken", "Total Marks", "Submitted At", "Rank",
 	}
 
 	// Check if headers already exist
-	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, "Sheet1!A1:M1").Context(ctx).Do()
+	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, "Sheet1!A1:N1").Context(ctx).Do()
 	if err != nil || len(resp.Values) == 0 || len(resp.Values[0]) == 0 {
 		log.Println("[SHEETS] Header row not found. Initializing Sheet1 headers...")
 		valueRange := &sheets.ValueRange{Values: [][]interface{}{headers}}
-		_, err = srv.Spreadsheets.Values.Update(spreadsheetID, "Sheet1!A1:M1", valueRange).
+		_, err = srv.Spreadsheets.Values.Update(spreadsheetID, "Sheet1!A1:N1", valueRange).
 			ValueInputOption("USER_ENTERED").Context(ctx).Do()
 		if err != nil {
 			log.Printf("[ERROR] Failed to write header row: %v", err)
@@ -72,74 +71,122 @@ func EnsureHeaders(ctx context.Context) error {
 	return nil
 }
 
-// AppendAndSortRankings appends a student score row, parses the actual row index
-// from the Sheets API response, and triggers a descending sort by Total Score.
-func AppendAndSortRankings(ctx context.Context, rowData []interface{}) error {
+// UpsertStudentRow syncs student details upon login/registration or final submission,
+// updating existing student rows or appending a new one, then auto-sorting by Total Marks (desc) and Time Taken (asc).
+func UpsertStudentRow(ctx context.Context, st *models.StudentState) error {
 	srv, spreadsheetID, err := getSheetsService(ctx)
 	if err != nil {
-		// Mock mode: log and return
-		log.Printf("[MOCK SHEETS] Score row: %v", rowData)
+		log.Printf("[MOCK SHEETS] Upsert student %s: %+v", st.StudentID, st)
 		return nil
 	}
 
-	// 1. Append the row
-	valueRange := &sheets.ValueRange{Values: [][]interface{}{rowData}}
-	appendResp, err := srv.Spreadsheets.Values.Append(spreadsheetID, "Sheet1!A:M", valueRange).
-		ValueInputOption("USER_ENTERED").
-		InsertDataOption("INSERT_ROWS").
-		Context(ctx).
-		Do()
-	if err != nil {
-		log.Printf("[ERROR] Failed to append row to Google Sheets: %v", err)
-		return err
+	entryTimeStr := "-"
+	if st.RegisteredAt != nil {
+		entryTimeStr = st.RegisteredAt.Format("2006-01-02 15:04:05")
+	} else if !st.UpdatedAt.IsZero() {
+		entryTimeStr = st.UpdatedAt.Format("2006-01-02 15:04:05")
 	}
 
-	// 2. Parse actual row index from UpdatedRange (e.g. "Sheet1!A21:M21")
-	rowIndex := 2 // safe fallback
-	if appendResp.Updates != nil && appendResp.Updates.UpdatedRange != "" {
-		updatedRange := appendResp.Updates.UpdatedRange
-		parts := strings.Split(updatedRange, "!")
-		if len(parts) == 2 {
-			rangeParts := strings.Split(parts[1], ":")
-			rowStr := strings.TrimLeft(rangeParts[0], "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-			if parsedRow, parseErr := strconv.Atoi(rowStr); parseErr == nil {
-				rowIndex = parsedRow
+	status := "Registered"
+	if st.IsSubmitted {
+		status = "Submitted"
+	} else if st.SelectedTrack != "" {
+		status = "In Progress"
+	}
+
+	timeTakenStr := "-"
+	if st.IsSubmitted && st.TimeTakenFormatted != "" {
+		timeTakenStr = st.TimeTakenFormatted
+	}
+
+	submittedAtStr := "-"
+	if st.SubmittedAt != nil {
+		submittedAtStr = st.SubmittedAt.Format("2006-01-02 15:04:05")
+	}
+
+	attempted := st.CorrectCount + st.IncorrectCount
+	unattempted := st.UnattemptedCount
+	if !st.IsSubmitted && unattempted == 0 {
+		unattempted = 60
+	}
+
+	rowData := []interface{}{
+		entryTimeStr,
+		st.Name,
+		st.StudentID,
+		st.CollegeEmail,
+		st.Course,
+		st.EnrollmentNum,
+		st.SelectedTrack,
+		status,
+		attempted,
+		unattempted,
+		timeTakenStr,
+		st.TotalScore,
+		submittedAtStr,
+		"", // Rank (calculated by sort)
+	}
+
+	// 1. Fetch current Sheet data to find existing student ID row
+	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, "Sheet1!C:C").Context(ctx).Do()
+	targetRow := 0
+	if err == nil && len(resp.Values) > 0 {
+		for i, row := range resp.Values {
+			if len(row) > 0 && fmt.Sprintf("%v", row[0]) == st.StudentID {
+				targetRow = i + 1 // 1-based index
+				break
 			}
 		}
-		log.Printf("[SHEETS] Appended row at index %d (range: %s)", rowIndex, updatedRange)
 	}
 
-	// 3. Auto-sort by Total Score (Column L / index 11) descending, tie-break by Correct Count (Column I / index 8)
+	if targetRow > 0 {
+		// Update existing row
+		rangeStr := fmt.Sprintf("Sheet1!A%d:N%d", targetRow, targetRow)
+		valueRange := &sheets.ValueRange{Values: [][]interface{}{rowData}}
+		_, err = srv.Spreadsheets.Values.Update(spreadsheetID, rangeStr, valueRange).
+			ValueInputOption("USER_ENTERED").Context(ctx).Do()
+		if err != nil {
+			log.Printf("[ERROR] Failed to update row for student %s: %v", st.StudentID, err)
+		} else {
+			log.Printf("[SHEETS] Updated row %d for student %s", targetRow, st.StudentID)
+		}
+	} else {
+		// Append new row
+		valueRange := &sheets.ValueRange{Values: [][]interface{}{rowData}}
+		_, err = srv.Spreadsheets.Values.Append(spreadsheetID, "Sheet1!A:N", valueRange).
+			ValueInputOption("USER_ENTERED").InsertDataOption("INSERT_ROWS").Context(ctx).Do()
+		if err != nil {
+			log.Printf("[ERROR] Failed to append row for student %s: %v", st.StudentID, err)
+		} else {
+			log.Printf("[SHEETS] Appended new row for student %s", st.StudentID)
+		}
+	}
+
+	// 2. Trigger auto-sort: Primary Total Marks (Col L / Index 11) DESC, Secondary Time Taken (Col K / Index 10) ASC
 	sortReq := &sheets.BatchUpdateSpreadsheetRequest{
 		Requests: []*sheets.Request{
 			{
 				SortRange: &sheets.SortRangeRequest{
 					Range: &sheets.GridRange{
-						SheetId:          0, // Default Sheet1
-						StartRowIndex:    1, // Skip header row (index 0)
+						SheetId:          0,
+						StartRowIndex:    1, // Skip header row
 						StartColumnIndex: 0,
-						EndColumnIndex:   13,
+						EndColumnIndex:   14,
 					},
 					SortSpecs: []*sheets.SortSpec{
-						{DimensionIndex: 11, SortOrder: "DESCENDING"}, // Total Score
-						{DimensionIndex: 8, SortOrder: "DESCENDING"},  // Correct Count (tie-breaker)
+						{DimensionIndex: 11, SortOrder: "DESCENDING"}, // Total Marks
+						{DimensionIndex: 10, SortOrder: "ASCENDING"},  // Time Taken
 					},
 				},
 			},
 		},
 	}
 
-	_, sortErr := srv.Spreadsheets.BatchUpdate(spreadsheetID, sortReq).Context(ctx).Do()
-	if sortErr != nil {
-		log.Printf("[WARN] Auto-sort BatchUpdate failed: %v", sortErr)
-	} else {
-		log.Println("[SHEETS] Leaderboard auto-ranked descending by Total Score.")
-	}
-
+	_, _ = srv.Spreadsheets.BatchUpdate(spreadsheetID, sortReq).Context(ctx).Do()
 	return nil
 }
 
-// BulkExportStudents clears existing data rows and writes all students sorted by score
+// BulkExportStudents clears existing data rows and writes all students sorted by score (desc) & time taken (asc)
 // with computed rank. Used by the admin /api/admin/export-sheets endpoint.
 func BulkExportStudents(ctx context.Context, students []models.StudentState) error {
 	srv, spreadsheetID, err := getSheetsService(ctx)
@@ -148,36 +195,69 @@ func BulkExportStudents(ctx context.Context, students []models.StudentState) err
 		return err
 	}
 
-	// Sort by TotalScore desc, tie-break by CorrectCount desc
+	// Sort by TotalScore desc, tie-break by TimeTakenSeconds asc, then CorrectCount desc
 	sort.Slice(students, func(i, j int) bool {
-		if students[i].TotalScore == students[j].TotalScore {
-			return students[i].CorrectCount > students[j].CorrectCount
+		if students[i].TotalScore != students[j].TotalScore {
+			return students[i].TotalScore > students[j].TotalScore
 		}
-		return students[i].TotalScore > students[j].TotalScore
+		if students[i].TimeTakenSeconds != students[j].TimeTakenSeconds && students[i].TimeTakenSeconds > 0 && students[j].TimeTakenSeconds > 0 {
+			return students[i].TimeTakenSeconds < students[j].TimeTakenSeconds
+		}
+		return students[i].CorrectCount > students[j].CorrectCount
 	})
 
 	var rows [][]interface{}
 	for i, s := range students {
-		timestamp := s.UpdatedAt.Format("2006-01-02 15:04:05")
+		entryTimeStr := "-"
+		if s.RegisteredAt != nil {
+			entryTimeStr = s.RegisteredAt.Format("2006-01-02 15:04:05")
+		} else if !s.UpdatedAt.IsZero() {
+			entryTimeStr = s.UpdatedAt.Format("2006-01-02 15:04:05")
+		}
+
+		status := "Registered"
+		if s.IsSubmitted {
+			status = "Submitted"
+		} else if s.SelectedTrack != "" {
+			status = "In Progress"
+		}
+
+		timeTakenStr := "-"
+		if s.IsSubmitted && s.TimeTakenFormatted != "" {
+			timeTakenStr = s.TimeTakenFormatted
+		}
+
+		submittedAtStr := "-"
+		if s.SubmittedAt != nil {
+			submittedAtStr = s.SubmittedAt.Format("2006-01-02 15:04:05")
+		}
+
+		attempted := s.CorrectCount + s.IncorrectCount
+		unattempted := s.UnattemptedCount
+		if !s.IsSubmitted && unattempted == 0 {
+			unattempted = 60
+		}
+
 		rows = append(rows, []interface{}{
-			timestamp,
+			entryTimeStr,
 			s.Name,
-			s.PersonalEmail,
+			s.StudentID,
 			s.CollegeEmail,
 			s.Course,
-			s.StudentID,
 			s.EnrollmentNum,
 			s.SelectedTrack,
-			s.CorrectCount,
-			s.IncorrectCount,
-			s.UnattemptedCount,
+			status,
+			attempted,
+			unattempted,
+			timeTakenStr,
 			s.TotalScore,
+			submittedAtStr,
 			i + 1, // Rank (1-based)
 		})
 	}
 
-	// Clear existing data rows (preserve header row A1:M1)
-	_, err = srv.Spreadsheets.Values.Clear(spreadsheetID, "Sheet1!A2:M", &sheets.ClearValuesRequest{}).
+	// Clear existing data rows (preserve header row A1:N1)
+	_, err = srv.Spreadsheets.Values.Clear(spreadsheetID, "Sheet1!A2:N", &sheets.ClearValuesRequest{}).
 		Context(ctx).Do()
 	if err != nil {
 		log.Printf("[WARN] Failed to clear existing data rows: %v", err)

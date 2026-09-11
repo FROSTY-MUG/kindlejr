@@ -219,7 +219,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                   <th className="py-3 px-4 text-center">Correct</th>
                   <th className="py-3 px-4 text-center">Incorrect</th>
                   <th className="py-3 px-4 text-center">Unattempted</th>
-                  <th className="py-3 px-4 text-right">Total Score</th>
+                  <th className="py-3 px-4 text-center">Time Taken</th>
+                  <th className="py-3 px-4 text-right">Total Marks</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-sans">
@@ -295,7 +296,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                           {student.unattemptedCount}
                         </td>
 
-                        {/* Total Score */}
+                        {/* Time Taken */}
+                        <td className="py-3.5 px-4 text-center font-mono text-xs text-cyan-400 font-semibold">
+                          {student.timeTakenFormatted || "-"}
+                        </td>
+
+                        {/* Total Score / Marks */}
                         <td className="py-3.5 px-4 text-right font-mono text-base font-black text-amber-400">
                           {student.totalScore}
                         </td>
@@ -304,7 +310,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-500 font-mono text-xs">
+                    <td colSpan={9} className="py-8 text-center text-slate-500 font-mono text-xs">
                       No active telemetry data available yet.
                     </td>
                   </tr>

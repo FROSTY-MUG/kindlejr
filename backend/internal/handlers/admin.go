@@ -38,42 +38,49 @@ func GetLeaderboard(store *db.Store) http.HandlerFunc {
 		}
 
 		sort.Slice(students, func(i, j int) bool {
-			if students[i].TotalScore == students[j].TotalScore {
-				return students[i].CorrectCount > students[j].CorrectCount
+			if students[i].TotalScore != students[j].TotalScore {
+				return students[i].TotalScore > students[j].TotalScore
 			}
-			return students[i].TotalScore > students[j].TotalScore
+			if students[i].TimeTakenSeconds != students[j].TimeTakenSeconds && students[i].TimeTakenSeconds > 0 && students[j].TimeTakenSeconds > 0 {
+				return students[i].TimeTakenSeconds < students[j].TimeTakenSeconds
+			}
+			return students[i].CorrectCount > students[j].CorrectCount
 		})
 
 		type StudentEntry struct {
-			Rank             int    `json:"rank"`
-			StudentID        string `json:"studentId"`
-			Name             string `json:"name"`
-			CollegeEmail     string `json:"collegeEmail"`
-			Course           string `json:"course"`
-			EnrollmentNum    string `json:"enrollmentNum"`
-			SelectedTrack    string `json:"selectedTrack"`
-			TotalScore       int    `json:"totalScore"`
-			CorrectCount     int    `json:"correctCount"`
-			IncorrectCount   int    `json:"incorrectCount"`
-			UnattemptedCount int    `json:"unattemptedCount"`
-			IsSubmitted      bool   `json:"isSubmitted"`
+			Rank               int    `json:"rank"`
+			StudentID          string `json:"studentId"`
+			Name               string `json:"name"`
+			CollegeEmail       string `json:"collegeEmail"`
+			Course             string `json:"course"`
+			EnrollmentNum      string `json:"enrollmentNum"`
+			SelectedTrack      string `json:"selectedTrack"`
+			TotalScore         int    `json:"totalScore"`
+			CorrectCount       int    `json:"correctCount"`
+			IncorrectCount     int    `json:"incorrectCount"`
+			UnattemptedCount   int    `json:"unattemptedCount"`
+			TimeTakenSeconds   int    `json:"timeTakenSeconds"`
+			TimeTakenFormatted string `json:"timeTakenFormatted"`
+			IsSubmitted        bool   `json:"isSubmitted"`
 		}
 
 		entries := make([]StudentEntry, 0, len(students))
 		for i, s := range students {
 			entries = append(entries, StudentEntry{
-				Rank:             i + 1,
-				StudentID:        s.StudentID,
-				Name:             s.Name,
-				CollegeEmail:     s.CollegeEmail,
-				Course:           s.Course,
-				EnrollmentNum:    s.EnrollmentNum,
-				SelectedTrack:    s.SelectedTrack,
-				TotalScore:       s.TotalScore,
-				CorrectCount:     s.CorrectCount,
-				IncorrectCount:   s.IncorrectCount,
-				UnattemptedCount: s.UnattemptedCount,
-				IsSubmitted:      s.IsSubmitted,
+				Rank:               i + 1,
+				StudentID:          s.StudentID,
+				Name:               s.Name,
+				CollegeEmail:       s.CollegeEmail,
+				Course:             s.Course,
+				EnrollmentNum:      s.EnrollmentNum,
+				SelectedTrack:      s.SelectedTrack,
+				TotalScore:         s.TotalScore,
+				CorrectCount:       s.CorrectCount,
+				IncorrectCount:     s.IncorrectCount,
+				UnattemptedCount:   s.UnattemptedCount,
+				TimeTakenSeconds:   s.TimeTakenSeconds,
+				TimeTakenFormatted: s.TimeTakenFormatted,
+				IsSubmitted:        s.IsSubmitted,
 			})
 		}
 

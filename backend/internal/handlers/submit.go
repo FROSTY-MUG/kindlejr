@@ -116,21 +116,40 @@ func SubmitQuiz(store *db.Store, dataPath string) http.HandlerFunc {
 		totalScore := correctCount // 1 mark per correct answer
 		now := time.Now().UTC()
 
+		timeTakenSeconds := 0
+		timeTakenFormatted := "-"
+
+		if student.StartedAt != nil {
+			timeTakenSeconds = int(now.Sub(*student.StartedAt).Seconds())
+		} else if student.RegisteredAt != nil {
+			timeTakenSeconds = int(now.Sub(*student.RegisteredAt).Seconds())
+		}
+
+		if timeTakenSeconds > 0 {
+			mins := timeTakenSeconds / 60
+			secs := timeTakenSeconds % 60
+			timeTakenFormatted = fmt.Sprintf("%02dm %02ds", mins, secs)
+		}
+
 		student.IsSubmitted = true
 		student.TotalScore = totalScore
 		student.CorrectCount = correctCount
 		student.IncorrectCount = incorrectCount
 		student.UnattemptedCount = unattemptedCount
+		student.TimeTakenSeconds = timeTakenSeconds
+		student.TimeTakenFormatted = timeTakenFormatted
 		student.SubmittedAt = &now
 
 		updates := map[string]interface{}{
-			"answers":          student.Answers,
-			"isSubmitted":      true,
-			"totalScore":       totalScore,
-			"correctCount":     correctCount,
-			"incorrectCount":   incorrectCount,
-			"unattemptedCount": unattemptedCount,
-			"submittedAt":      &now,
+			"answers":            student.Answers,
+			"isSubmitted":        true,
+			"totalScore":         totalScore,
+			"correctCount":       correctCount,
+			"incorrectCount":     incorrectCount,
+			"unattemptedCount":   unattemptedCount,
+			"timeTakenSeconds":   timeTakenSeconds,
+			"timeTakenFormatted": timeTakenFormatted,
+			"submittedAt":        &now,
 		}
 
 		if err := store.UpsertStudentMap(ctx, student.StudentID, updates); err != nil {
@@ -139,22 +158,7 @@ func SubmitQuiz(store *db.Store, dataPath string) http.HandlerFunc {
 
 		// Async export & auto-sort to Google Sheets
 		go func(st *models.StudentState) {
-			rowData := []interface{}{
-				time.Now().Format("2006-01-02 15:04:05"),
-				st.Name,
-				st.PersonalEmail,
-				st.CollegeEmail,
-				st.Course,
-				st.StudentID,
-				st.EnrollmentNum,
-				st.SelectedTrack,
-				st.CorrectCount,
-				st.IncorrectCount,
-				st.UnattemptedCount,
-				st.TotalScore,
-				"", // Rank — auto-filled by sort position
-			}
-			if err := sheets.AppendAndSortRankings(context.Background(), rowData); err != nil {
+			if err := sheets.UpsertStudentRow(context.Background(), st); err != nil {
 				log.Printf("[ERROR] Google Sheets export failed for student %s: %v", st.StudentID, err)
 			}
 		}(student)

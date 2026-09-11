@@ -31,6 +31,16 @@ func RegisterStudent(store *db.Store) http.HandlerFunc {
 			return
 		}
 
+		ctx := r.Context()
+		now := time.Now().UTC()
+
+		// Fetch existing student to preserve registeredAt if present
+		existing, _ := store.GetStudent(ctx, payload.StudentID)
+		var registeredAt *time.Time = &now
+		if existing != nil && existing.RegisteredAt != nil {
+			registeredAt = existing.RegisteredAt
+		}
+
 		updates := map[string]interface{}{
 			"studentId":     payload.StudentID,
 			"name":          payload.Name,
@@ -38,14 +48,34 @@ func RegisterStudent(store *db.Store) http.HandlerFunc {
 			"collegeEmail":  payload.CollegeEmail,
 			"course":        payload.Course,
 			"enrollmentNum": payload.EnrollmentNum,
-			"updatedAt":     time.Now().UTC(),
+			"registeredAt":  registeredAt,
+			"updatedAt":     now,
 		}
 
-		ctx := r.Context()
 		if err := store.UpsertStudentMap(ctx, payload.StudentID, updates); err != nil {
 			http.Error(w, "Failed to persist registration details", http.StatusInternalServerError)
 			return
 		}
+
+		// Async sync registration entry to Google Sheets
+		go func() {
+			st, err := store.GetStudent(context.Background(), payload.StudentID)
+			if err == nil && st != nil {
+				_ = sheets.UpsertStudentRow(context.Background(), st)
+			} else {
+				stFallback := &models.StudentState{
+					StudentID:     payload.StudentID,
+					Name:          payload.Name,
+					PersonalEmail: payload.PersonalEmail,
+					CollegeEmail:  payload.CollegeEmail,
+					Course:        payload.Course,
+					EnrollmentNum: payload.EnrollmentNum,
+					RegisteredAt:  registeredAt,
+					UpdatedAt:     now,
+				}
+				_ = sheets.UpsertStudentRow(context.Background(), stFallback)
+			}
+		}()
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

@@ -28,17 +28,34 @@ func InitQuiz(store *db.Store) http.HandlerFunc {
 			return
 		}
 
+		ctx := r.Context()
+		now := time.Now().UTC()
+
+		existing, _ := store.GetStudent(ctx, payload.StudentID)
+		var startedAt *time.Time = &now
+		if existing != nil && existing.StartedAt != nil {
+			startedAt = existing.StartedAt
+		}
+
 		updates := map[string]interface{}{
 			"selectedTrack": payload.SelectedTrack,
 			"shuffledOrder": payload.ShuffledOrder,
-			"updatedAt":     time.Now().UTC(),
+			"startedAt":     startedAt,
+			"updatedAt":     now,
 		}
 
-		ctx := r.Context()
 		if err := store.UpsertStudentMap(ctx, payload.StudentID, updates); err != nil {
 			http.Error(w, "Failed to initialize quiz track", http.StatusInternalServerError)
 			return
 		}
+
+		// Async update Sheets status to In Progress
+		go func() {
+			st, err := store.GetStudent(context.Background(), payload.StudentID)
+			if err == nil && st != nil {
+				_ = sheets.UpsertStudentRow(context.Background(), st)
+			}
+		}()
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

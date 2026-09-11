@@ -43,6 +43,8 @@ export interface AdminLeaderboardEntry {
   correctCount: number;
   incorrectCount: number;
   unattemptedCount: number;
+  timeTakenSeconds?: number;
+  timeTakenFormatted?: string;
   isSubmitted: boolean;
 }
 

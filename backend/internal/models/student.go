@@ -11,15 +11,18 @@ type StudentState struct {
 	Course           string            `firestore:"course" json:"course"`
 	EnrollmentNum    string            `firestore:"enrollmentNum" json:"enrollmentNum"`
 	SelectedTrack    string            `firestore:"selectedTrack" json:"selectedTrack"` // "C" or "Python"
-	StartedAt        *time.Time        `firestore:"startedAt,omitempty" json:"startedAt,omitempty"`
-	CurrentQuestion  int               `firestore:"currentQuestion" json:"currentQuestion"`
-	ShuffledOrder    []int             `firestore:"shuffledOrder" json:"shuffledOrder"`
-	Answers          map[string]string `firestore:"answers" json:"answers"` // QuestionID -> Answer
-	IsSubmitted      bool              `firestore:"isSubmitted" json:"isSubmitted"`
-	TotalScore       int               `firestore:"totalScore" json:"totalScore"`
-	CorrectCount     int               `firestore:"correctCount" json:"correctCount"`
-	IncorrectCount   int               `firestore:"incorrectCount" json:"incorrectCount"`
-	UnattemptedCount int               `firestore:"unattemptedCount" json:"unattemptedCount"`
-	SubmittedAt      *time.Time        `firestore:"submittedAt,omitempty" json:"submittedAt,omitempty"`
-	UpdatedAt        time.Time         `firestore:"updatedAt" json:"updatedAt"`
+	RegisteredAt       *time.Time        `firestore:"registeredAt,omitempty" json:"registeredAt,omitempty"`
+	StartedAt          *time.Time        `firestore:"startedAt,omitempty" json:"startedAt,omitempty"`
+	CurrentQuestion    int               `firestore:"currentQuestion" json:"currentQuestion"`
+	ShuffledOrder      []int             `firestore:"shuffledOrder" json:"shuffledOrder"`
+	Answers            map[string]string `firestore:"answers" json:"answers"` // QuestionID -> Answer
+	IsSubmitted        bool              `firestore:"isSubmitted" json:"isSubmitted"`
+	TotalScore         int               `firestore:"totalScore" json:"totalScore"` // Total Marks
+	CorrectCount       int               `firestore:"correctCount" json:"correctCount"`
+	IncorrectCount     int               `firestore:"incorrectCount" json:"incorrectCount"`
+	UnattemptedCount   int               `firestore:"unattemptedCount" json:"unattemptedCount"`
+	TimeTakenSeconds   int               `firestore:"timeTakenSeconds" json:"timeTakenSeconds"`
+	TimeTakenFormatted string            `firestore:"timeTakenFormatted" json:"timeTakenFormatted"`
+	SubmittedAt        *time.Time        `firestore:"submittedAt,omitempty" json:"submittedAt,omitempty"`
+	UpdatedAt          time.Time         `firestore:"updatedAt" json:"updatedAt"`
 }
