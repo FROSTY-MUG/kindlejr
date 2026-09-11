@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { User, Mail, GraduationCap, Contact, ArrowRight, RefreshCw, AlertCircle, Sparkles } from "lucide-react";
 import { apiRegisterStudent, apiGetState, StudentData } from "../services/api";
+import { preloadSirenAudio } from "./QuizEngine";
 
 interface RegistrationFormProps {
   onComplete: (studentData: StudentData) => void;
@@ -93,6 +94,14 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
+
+    // Forced Fullscreen & Preload Siren Audio Object on User Gesture (Autoplay bypass)
+    try {
+      if (typeof document !== "undefined" && document.documentElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch {}
+    preloadSirenAudio();
 
     // Secret Admin Interception Trigger
     const name = formData.name.trim();

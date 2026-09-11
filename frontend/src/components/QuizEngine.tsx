@@ -31,23 +31,54 @@ interface QuizEngineProps {
   onSubmitted: (result: SubmissionResult) => void;
 }
 
-const ASCII_SECURITY_BANNER = `
-================================================================================
- ____   ___    _   _  ___ _____   _____ ______   __  _____ ___     ____ _   _ _____    _  _____ 
-|  _ \\ / _ \\  | \\ | |/ _ \\_   _| |_   _|  _ \\ \\ / / |_   _/ _ \\   / ___| | | | ____|  / \\|_   _|
-| | | | | | | |  \\| | | | || |     | | | |_) \\ V /    | || | | | | |   | |_| |  _|   / _ \\ | |  
-| |_| | |_| | | |\\  | |_| || |     | | |  _ < | |     | || |_| | | |___|  _  | |___ / ___ \\| |  
-|____/ \\___/  |_| \\_|\\___/ |_|     |_| |_| \\_\\|_|     |_| \\___/   \\____|_| |_|_____/_/   \\_\\_|  
-                                                                                               
- __   _____  _   _      _    ____  _____    ____    _   _  ____ _   _ _____                     
- \\ \\ / / _ \\| | | |    / \\  |  _ \\| ____|  / ___|  / \\ | | | | | | | |_   _|                    
-  \\ V / | | | | | |   / _ \\ | |_) |  _|   | |     / _ \\| | | | | | | | | |                      
-   | || |_| | |_| |  / ___ \\|  _ <| |___  | |___ / ___ | |_| | |_| | | | |                      
-   |_| \\___/ \\___/  /_/   \\_\\_| \\_\\_____|  \\____/_/   \\_\\____/\\___/  |_|                      
-================================================================================
+const ASCII_CODE_CHEATING_BANNER = `
+====================================================================================================
+__     ______  _    _             _____  ______    _____ ____  _____  ______ 
+\\ \\   / / __ \\| |  | |     /\\    |  __ \\|  ____|  / ____/ __ \\|  __ \\|  ____|
+ \\ \\_/ / |  | | |  | |    /  \\   | |__) | |__    | |   | |  | | |  | | |__   
+  \\   /| |  | | |  | |   / /\\ \\  |  _  /|  __|   | |   | |  | | |  | |  __|  
+   | | | |__| | |__| |  / ____ \\ | | \\ \\| |____  | |___| |__| | |__| | |____ 
+   |_|  \\____/ \\____/  /_/    \\_\\|_|  \\_\\______|  \\_____\\____/|_____/|______|
+                                                                             
+  _____ _    _ ______       _______ _____ _   _  _____                       
+ / ____| |  | |  ____|   /\\|__   __|_   _| \\ | |/ ____|                      
+| |    | |__| | |__     /  \\  | |    | | |  \\| | |  __                       
+| |    |  __  |  __|   / /\\ \\ | |    | | | . \` | | |_ |                      
+| |____| |  | | |____ / ____ \\| |   _| |_| |\\  | |__| |                      
+ \\_____|_|  |_|______/_/    \\_\\|_|  |_____|_| \\_|\\_____|                      
+                                                                             
+ _____   ____    _   _  ____ _______   _____   ____   _____ _______          
+|  __ \\ / __ \\  | \\ | |/ __ \\__   __| |  __ \\ / __ \\ |_   _|__   __|         
+| |  | | |  | | |  \\| | |  | | | |    | |  | | |  | |  | |    | |            
+| |  | | |  | | | . \` | |  | | | |    | |  | | |  | |  | |    | |            
+| |__| | |__| | | |\\  | |__| | | |    | |__| | |__| | _| |_   | |            
+|_____/ \\____/  |_| \\_|\\____/  |_|    |_____/ \\____/ |_____|  |_|            
+                                                                             
+          /\\   / ____|   /\\   |_   _| \\ | |                                   
+         /  \\ | |  __   /  \\    | | |  \\| |                                   
+        / /\\ \\| | |_ | / /\\ \\   | | | . \` |                                   
+       / ____ \\ |__| |/ ____ \\ _| |_| |\\  |                                   
+      /_/    \\_\\_____/_/    \\_\\_____|_| \\_|                                   
+
+                   YOU ARE CODE CHEATING, DO NOT DO IT AGAIN.
+====================================================================================================
 `;
 
+// Self-invoking function that immediately clears the console and prints the massive ASCII warning
+if (typeof window !== "undefined") {
+  (function () {
+    try {
+      console.clear();
+      console.log(
+        "%c" + ASCII_CODE_CHEATING_BANNER,
+        "color: red; font-size: 20px; font-weight: bold; font-family: monospace;"
+      );
+    } catch (e) {}
+  })();
+}
+
 let globalAudioCtx: AudioContext | null = null;
+let preloadedSirenAudio: HTMLAudioElement | null = null;
 
 function getOrInitAudioContext(): AudioContext | null {
   try {
@@ -64,6 +95,26 @@ function getOrInitAudioContext(): AudioContext | null {
     return globalAudioCtx;
   } catch {
     return null;
+  }
+}
+
+// Preload loud audio object during user gesture to bypass browser autoplay restrictions
+export function preloadSirenAudio() {
+  try {
+    if (typeof window !== "undefined") {
+      if (!preloadedSirenAudio) {
+        preloadedSirenAudio = new Audio(
+          "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+        );
+        preloadedSirenAudio.loop = true;
+        preloadedSirenAudio.volume = 1.0;
+        preloadedSirenAudio.preload = "auto";
+      }
+      preloadedSirenAudio.load();
+      getOrInitAudioContext();
+    }
+  } catch (e) {
+    console.warn("Audio preload error:", e);
   }
 }
 
@@ -123,6 +174,18 @@ function playSecuritySiren() {
   } catch (err) {
     console.warn("Audio Siren failed:", err);
   }
+}
+
+// Triggers both preloaded HTML5 audio and synthetic Web Audio siren at full volume
+export function playPreloadedSiren() {
+  try {
+    if (preloadedSirenAudio) {
+      preloadedSirenAudio.volume = 1.0;
+      preloadedSirenAudio.currentTime = 0;
+      preloadedSirenAudio.play().catch(() => {});
+    }
+  } catch {}
+  playSecuritySiren();
 }
 
 export const QuizEngine: React.FC<QuizEngineProps> = ({
@@ -283,7 +346,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         const newCount = prev + 1;
         if (newCount >= 2) {
           // Strike 2 ONLY: Close exam immediately and play loud alarm siren!
-          playSecuritySiren();
+          playPreloadedSiren();
           handleSubmit();
         } else {
           // Strike 1: Show 1st & only warning modal
@@ -371,7 +434,11 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       try {
         // Output large ASCII warning banner to console
         const nativeLog = console.warn || console.log;
-        nativeLog.call(console, `%c${ASCII_SECURITY_BANNER}`, "color: #ef4444; font-weight: bold; font-family: monospace; font-size: 11px;");
+        nativeLog.call(
+          console,
+          `%c${ASCII_CODE_CHEATING_BANNER}`,
+          "color: red; font-weight: bold; font-family: monospace; font-size: 16px;"
+        );
       } catch {}
       setShowDevToolsModal(true);
       notifyBlocked(triggerName);
@@ -380,27 +447,65 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
+      // Block F12
       if (e.key === "F12") {
         e.preventDefault();
         triggerDevToolsAlert("DevTools Access (F12)");
         return;
       }
 
-      if (e.key === "PrintScreen") {
+      // Screenshot Prevention: Windows PrintScreen and Mac Meta+Shift+3 / Meta+Shift+4
+      const isMacScreenshot =
+        (e.metaKey && e.shiftKey && (e.key === "3" || e.key === "4")) ||
+        (e.metaKey && e.shiftKey && (e.code === "Digit3" || e.code === "Digit4"));
+
+      if (e.key === "PrintScreen" || isMacScreenshot) {
         e.preventDefault();
-        notifyBlocked("Screen Capture");
+        notifyBlocked("Screen Capture Attempt Blocked");
+
+        // Instantly apply backdrop-filter: blur(50px) to document.body for 3 seconds
+        if (typeof document !== "undefined") {
+          document.body.style.filter = "blur(50px)";
+          document.body.style.transition = "filter 0.1s ease";
+        }
+
+        // Log strike against user
+        setViolationCount((prev) => {
+          const newCount = prev + 1;
+          if (newCount >= 2) {
+            playPreloadedSiren();
+            handleSubmit();
+          } else {
+            setShowWarningToast(true);
+          }
+          return newCount;
+        });
+
+        setTimeout(() => {
+          if (typeof document !== "undefined") {
+            document.body.style.filter = "";
+          }
+        }, 3000);
         return;
       }
 
       if (isCtrlOrCmd) {
         const key = e.key.toLowerCase();
+        // Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+Shift+K
         if (e.shiftKey && (key === "i" || key === "j" || key === "c" || key === "k")) {
           e.preventDefault();
-          triggerDevToolsAlert("DevTools Shortcut");
+          triggerDevToolsAlert("DevTools Shortcut (Ctrl+Shift+" + key.toUpperCase() + ")");
           return;
         }
 
-        if (key === "u" || key === "s" || key === "p" || key === "a") {
+        // Block Ctrl+U (View Source)
+        if (key === "u") {
+          e.preventDefault();
+          triggerDevToolsAlert("View Source Shortcut (Ctrl+U)");
+          return;
+        }
+
+        if (key === "s" || key === "p" || key === "a") {
           e.preventDefault();
           notifyBlocked(`Shortcut (Ctrl+${key.toUpperCase()})`);
           return;
@@ -435,6 +540,50 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       }
     };
 
+    // Chrome Extension Blocking (DOM Monitoring via MutationObserver)
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.addedNodes)) {
+          if (node instanceof HTMLElement) {
+            const tag = node.tagName.toLowerCase();
+            const id = (node.id || "").toLowerCase();
+            const className = (typeof node.className === "string" ? node.className : "").toLowerCase();
+
+            const isExtension =
+              tag.includes("grammarly") ||
+              tag.includes("chatgpt") ||
+              tag.includes("copilot") ||
+              tag.includes("extension") ||
+              id.includes("grammarly") ||
+              id.includes("chatgpt") ||
+              className.includes("grammarly") ||
+              node.hasAttribute("data-grammarly-part") ||
+              node.hasAttribute("data-gr-ext-installed") ||
+              node.hasAttribute("data-chatgpt-ext") ||
+              (node.parentNode === document.body &&
+                !["__next", "portal-root", "next"].includes(id) &&
+                !className.includes("portal") &&
+                tag !== "script" &&
+                tag !== "style");
+
+            if (isExtension) {
+              try {
+                node.remove();
+              } catch {}
+              notifyBlocked("Unauthorized browser extension / DOM injection removed");
+            }
+          }
+        }
+      }
+    });
+
+    if (typeof document !== "undefined" && document.body) {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
     // Global audio warmup on user gesture
     const unlockAudio = () => {
       getOrInitAudioContext();
@@ -466,6 +615,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
 
     return () => {
       clearInterval(interval);
+      observer.disconnect();
       document.removeEventListener("pointerdown", unlockAudio);
       document.removeEventListener("keydown", unlockAudio);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);

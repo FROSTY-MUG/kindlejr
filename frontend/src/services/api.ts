@@ -31,11 +31,13 @@ export interface StudentData {
 
 export interface Question {
   id: string;
-  type: "mcq" | "blank";
-  section: string;
-  text: string;
-  options?: string[];
+  type?: "mcq" | "blank";
+  section?: string;
+  text?: string;
+  question?: string;
+  options?: string[] | Record<string, string>;
   answer?: string;
+  correct_answer?: string;
   explanation?: string;
 }
 

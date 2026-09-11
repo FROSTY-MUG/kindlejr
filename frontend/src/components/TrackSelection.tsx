@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Code2, Terminal, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { apiGetQuestions, apiInitQuiz, Question, StudentData } from "../services/api";
+import { preloadSirenAudio } from "./QuizEngine";
 
 interface TrackSelectionProps {
   student: StudentData;
@@ -22,6 +23,13 @@ export const TrackSelection: React.FC<TrackSelectionProps> = ({
   const handleStartQuiz = async () => {
     setIsLoading(true);
     setErrorMsg("");
+
+    try {
+      if (typeof document !== "undefined" && document.documentElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch {}
+    preloadSirenAudio();
     try {
       const rawQuestions = await apiGetQuestions(selectedTrack.toLowerCase());
       const orderArray = Array.from({ length: rawQuestions.length }, (_, i) => i);

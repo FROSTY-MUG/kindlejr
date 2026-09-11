@@ -24,18 +24,25 @@ const (
 	lateCollectionName = "kindle_late_submissions"
 )
 
+type firestoreJob struct {
+	studentID string
+	payload   map[string]interface{}
+}
+
 // Store is the single persistence facade used by every handler. It is
 // Firestore-first (Cloud Firestore via the Firebase Admin SDK) and
 // transparently falls back to the resilient FileStore whenever Firestore is
 // unreachable, unauthenticated, or errors mid-flight. This guarantees that the
 // exam keeps working even with broken Firebase credentials.
 type Store struct {
-	Client  *firestore.Client
-	file    *FileStore
-	mu      sync.RWMutex // guards Backend/Reason
-	wg      sync.WaitGroup
-	Backend string // "firestore" or "local"
-	Reason  string // human-readable explanation of the current backend
+	Client     *firestore.Client
+	file       *FileStore
+	mu         sync.RWMutex // guards Backend/Reason
+	wg         sync.WaitGroup
+	Backend    string // "firestore" or "local"
+	Reason     string // human-readable explanation of the current backend
+	jobChan    chan firestoreJob
+	closeOnce  sync.Once
 }
 
 // InitFirestore initialises the persistence layer.
@@ -139,12 +146,34 @@ func InitFirestore(dataDir string) *Store {
 		if _, perr := c.Collection(collectionName).Limit(1).Documents(probeCtx).Next(); perr != nil && perr != iterator.Done {
 			log.Printf("[DB] Firestore probe failed (%v) - staying on local mirror for reads.", perr)
 			store.mu.Lock()
-			store.Reason = "firestore probe failed: " + perr.Error()
-			store.mu.Unlock()
 			return
 		}
 		log.Println("[DB] Firestore probe succeeded - live persistence active.")
 	}(client)
+
+	// Start 50-worker background queue to scale for 400+ concurrent users
+	const numWorkers = 50
+	store.jobChan = make(chan firestoreJob, 2048)
+	for i := 0; i < numWorkers; i++ {
+		store.wg.Add(1)
+		go func(workerID int) {
+			defer store.wg.Done()
+			for job := range store.jobChan {
+				if store.Client == nil {
+					continue
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				if _, err := store.Client.Collection(collectionName).Doc(job.studentID).Set(ctx, job.payload, firestore.MergeAll); err != nil {
+					log.Printf("[DB][Worker %d] Firestore upsert failed for %s (%v)", workerID, job.studentID, err)
+					store.mu.Lock()
+					store.Reason = "firestore write failed: " + err.Error()
+					store.mu.Unlock()
+				}
+				cancel()
+			}
+		}(i + 1)
+	}
+	log.Printf("[DB] Initialized 50-goroutine worker pool for 400+ concurrent students.")
 
 	log.Println("[DB] Firebase Admin SDK initialised; Firestore primary with local mirror.")
 	return store
@@ -230,6 +259,11 @@ func (s *Store) FlushLocal() {
 // Close drains in-flight writes, flushes the local mirror and then shuts down
 // the Firestore client connection.
 func (s *Store) Close() error {
+	s.closeOnce.Do(func() {
+		if s.jobChan != nil {
+			close(s.jobChan)
+		}
+	})
 	s.Wait()
 	s.FlushLocal()
 	if s.Client != nil {
@@ -268,7 +302,7 @@ func (s *Store) GetStudent(ctx context.Context, studentID string) (*models.Stude
 //  1. The in-memory/on-disk mirror is updated synchronously. That is a map
 //     write plus a cheap debounced file flush, so the HTTP response returns
 //     immediately and no answer can be lost.
-//  2. The Firestore write is dispatched on a detached context in a goroutine
+//  2. The Firestore write is dispatched into a 50-goroutine worker pool
 //     with its own timeout. A slow or unreachable Firestore can therefore
 //     never stall the request that carries a student's answer.
 //
@@ -290,10 +324,19 @@ func (s *Store) UpsertStudentMap(_ context.Context, studentID string, updates ma
 	}
 
 	// Copy the payload: the map is owned by the caller's stack and we hand it
-	// to another goroutine.
+	// to another goroutine / worker channel.
 	payload := make(map[string]interface{}, len(updates))
 	for k, v := range updates {
 		payload[k] = v
+	}
+
+	if s.jobChan != nil {
+		select {
+		case s.jobChan <- firestoreJob{studentID: studentID, payload: payload}:
+			return nil
+		default:
+			// Buffer full fallback (spawns emergency goroutine)
+		}
 	}
 
 	s.wg.Add(1)
@@ -303,7 +346,7 @@ func (s *Store) UpsertStudentMap(_ context.Context, studentID string, updates ma
 		defer cancel()
 
 		if _, err := s.Client.Collection(collectionName).Doc(studentID).Set(ctx, payload, firestore.MergeAll); err != nil {
-			log.Printf("[DB] Firestore upsert failed for %s (%v) - local mirror retained.", studentID, err)
+			log.Printf("[DB] Direct fallback upsert failed for %s (%v) - local mirror retained.", studentID, err)
 			s.mu.Lock()
 			s.Reason = "firestore write failed: " + err.Error()
 			s.mu.Unlock()

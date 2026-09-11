@@ -16,7 +16,26 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   userAnswer,
   onAnswerChange,
 }) => {
-  const options = question.options || [];
+  const rawOptions = question.options || [];
+  const normalizedOptions: { letter: string; text: string }[] = [];
+
+  if (Array.isArray(rawOptions)) {
+    rawOptions.forEach((opt, idx) => {
+      normalizedOptions.push({
+        letter: String.fromCharCode(65 + idx),
+        text: String(opt),
+      });
+    });
+  } else if (typeof rawOptions === "object" && rawOptions !== null) {
+    Object.entries(rawOptions).forEach(([letter, text]) => {
+      normalizedOptions.push({
+        letter: letter.toUpperCase(),
+        text: String(text),
+      });
+    });
+  }
+
+  const questionTitle = question.text || (question as any).question || "";
 
   return (
     <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-8 relative transition-all">
@@ -39,22 +58,23 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {/* Question Text */}
       <div className="mb-8">
         <h3 className="text-base sm:text-lg font-bold text-slate-800 whitespace-pre-wrap leading-relaxed tracking-tight">
-          {question.text}
+          {questionTitle}
         </h3>
       </div>
 
       {/* MCQ Answer Options */}
       <div className="space-y-3.5">
-        {options.map((opt, idx) => {
-          const letter = String.fromCharCode(65 + idx); // A, B, C, D
+        {normalizedOptions.map((opt, idx) => {
           const isSelected =
-            userAnswer === opt ||
-            userAnswer.toLowerCase() === letter.toLowerCase();
+            userAnswer === opt.text ||
+            userAnswer === opt.letter ||
+            userAnswer.toLowerCase() === opt.letter.toLowerCase() ||
+            userAnswer.toLowerCase() === opt.text.toLowerCase();
 
           return (
             <div
               key={idx}
-              onClick={() => onAnswerChange(opt)}
+              onClick={() => onAnswerChange(opt.text)}
               className={`cursor-pointer rounded-xl border-2 p-4 sm:p-5 transition-all flex items-center justify-between select-none ${
                 isSelected
                   ? "border-blue-600 bg-blue-50/80 text-slate-800 shadow-md ring-2 ring-blue-600/20 font-semibold"
@@ -69,9 +89,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       : "bg-white text-slate-600 border border-slate-200"
                   }`}
                 >
-                  {letter}
+                  {opt.letter}
                 </span>
-                <span className="text-sm sm:text-base leading-snug">{opt}</span>
+                <span className="text-sm sm:text-base leading-snug">{opt.text}</span>
               </div>
 
               {/* Radio Indicator */}

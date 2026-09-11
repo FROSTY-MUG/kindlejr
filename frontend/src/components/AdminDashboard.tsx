@@ -184,11 +184,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       {/* Fixed Top Bar Header */}
       <header className="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b-2 border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
-          <img src="/header-logo.png" alt="Graphic Era | IEEE SB" className="h-10 w-auto object-contain rounded-lg bg-white p-0.5 border border-slate-200 shadow-sm" />
+          <img src="/image_da2c44.png" alt="Graphic Era | IEEE SB" className="h-14 w-auto object-contain" />
           <div className="h-6 w-[2px] bg-slate-200" />
           <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 flex items-center gap-2">
-            <span>Kindle Jr 5.0</span>
-            <span className="text-slate-500 font-medium">— Live Telemetry</span>
+            <span className="text-blue-600 font-extrabold">Kindle Jr 5.0</span>
+            <span className="text-slate-500 font-medium">— Live Leaderboard Telemetry</span>
           </h1>
         </div>
 
