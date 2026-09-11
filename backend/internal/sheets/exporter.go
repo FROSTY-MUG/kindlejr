@@ -8,277 +8,449 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
+	"sync"
+	"time"
 
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
 	"kindle-jr/internal/models"
 )
 
-// getSheetsService creates a Google Sheets API service from Base64-encoded credentials.
-// Returns nil service if configuration is missing (log-only mock mode).
-func getSheetsService(ctx context.Context) (*sheets.Service, string, error) {
-	spreadsheetID := os.Getenv("GOOGLE_SHEET_ID")
-	base64Creds := os.Getenv("GOOGLE_SHEETS_CREDENTIALS_BASE64")
+// Transcript columns. Order is load-bearing: the SortSpecs below reference the
+// score and elapsed-time columns by index, so inserting a column in the middle
+// of this list silently breaks live ranking.
+const (
+	colRank        = 0
+	colName        = 1
+	colStudentID   = 2
+	colCollegeMail = 3
+	colCourse      = 4
+	colEnrollment  = 5
+	colTrack       = 6
+	colStatus      = 7
+	colCorrect     = 8
+	colIncorrect   = 9
+	colUnattempted = 10
+	colTotalScore  = 11
+	colElapsedSecs = 12
+	colTimeTaken   = 13
+	colSubmitted   = 14
+	colUpdated     = 15
+	columnCount    = 16
+)
 
-	if spreadsheetID == "" || base64Creds == "" {
-		return nil, "", fmt.Errorf("missing GOOGLE_SHEET_ID or GOOGLE_SHEETS_CREDENTIALS_BASE64 — Sheets exporter running in mock mode")
-	}
-
-	creds, err := base64.StdEncoding.DecodeString(base64Creds)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to decode GOOGLE_SHEETS_CREDENTIALS_BASE64: %v", err)
-	}
-
-	srv, err := sheets.NewService(ctx, option.WithCredentialsJSON(creds))
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create Sheets service: %v", err)
-	}
-
-	return srv, spreadsheetID, nil
+// Header is written to row 1 of the transcript sheet.
+var Header = []interface{}{
+	"Rank", "Name", "Student ID", "College Email", "Course", "Enrollment",
+	"Track", "Status", "Correct", "Incorrect", "Unattempted", "Total Marks",
+	"Elapsed (s)", "Time Taken", "Submitted At", "Last Updated",
 }
 
-// EnsureHeaders checks if the header row exists in Sheet1!A1:N1 and creates it if absent.
-func EnsureHeaders(ctx context.Context) error {
-	srv, spreadsheetID, err := getSheetsService(ctx)
-	if err != nil {
-		log.Printf("[SHEETS] %v", err)
-		return nil // Non-fatal: mock mode
-	}
+// defaultSheetName is the tab the pipeline reads and writes.
+const defaultSheetName = "Leaderboard"
 
-	headers := []interface{}{
-		"Entry Time", "Name", "Student ID", "College Email", "Course",
-		"Enrollment Num", "Track", "Status", "Attempted", "Unattempted",
-		"Time Taken", "Total Marks", "Submitted At", "Rank",
-	}
+// SheetsClient is a process-wide, lazily-built Google Sheets v4 service.
+//
+// Building a service performs an OAuth token exchange, so doing it per request
+// (as the original implementation did) added hundreds of milliseconds to every
+// sync. It is created once and reused; the credentials never change while the
+// process is alive.
+var (
+	clientMu      sync.Mutex
+	client        *sheets.Service
+	clientInitErr error
+)
 
-	// Check if headers already exist
-	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, "Sheet1!A1:N1").Context(ctx).Do()
-	if err != nil || len(resp.Values) == 0 || len(resp.Values[0]) == 0 {
-		log.Println("[SHEETS] Header row not found. Initializing Sheet1 headers...")
-		valueRange := &sheets.ValueRange{Values: [][]interface{}{headers}}
-		_, err = srv.Spreadsheets.Values.Update(spreadsheetID, "Sheet1!A1:N1", valueRange).
-			ValueInputOption("USER_ENTERED").Context(ctx).Do()
-		if err != nil {
-			log.Printf("[ERROR] Failed to write header row: %v", err)
-			return err
+// CredentialsFromEnv decodes GOOGLE_SHEETS_CREDENTIALS_BASE64 into an in-memory
+// service-account key. It never touches the filesystem, which is what makes the
+// pipeline work on Railway/Vercel where no local key file exists.
+func CredentialsFromEnv() ([]byte, error) {
+	for _, key := range []string{
+		"GOOGLE_SHEETS_CREDENTIALS_BASE64",
+		"GOOGLE_SERVICE_ACCOUNT_BASE64",
+		"FIREBASE_CREDENTIALS_BASE64",
+	} {
+		raw := osGetenv(key)
+		if raw == "" {
+			continue
 		}
-		log.Println("[SHEETS] Header row initialized successfully.")
-	} else {
-		log.Println("[SHEETS] Header row already exists. Skipping initialization.")
+		// Tolerate a raw (non-base64) JSON value so a mis-parenthesised deploy
+		// variable still works instead of failing silently.
+		if len(raw) > 0 && raw[0] == '{' {
+			return []byte(raw), nil
+		}
+		decoded, err := base64.StdEncoding.DecodeString(raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid base64 in %s: %w", key, err)
+		}
+		return decoded, nil
 	}
-
-	return nil
+	return nil, fmt.Errorf("no Google credentials found (set GOOGLE_SHEETS_CREDENTIALS_BASE64)")
 }
 
-// UpsertStudentRow syncs student details upon login/registration or final submission,
-// updating existing student rows or appending a new one, then auto-sorting by Total Marks (desc) and Time Taken (asc).
-func UpsertStudentRow(ctx context.Context, st *models.StudentState) error {
-	srv, spreadsheetID, err := getSheetsService(ctx)
+// service returns the shared Sheets client, creating it on first use.
+func service(ctx context.Context) (*sheets.Service, error) {
+	clientMu.Lock()
+	defer clientMu.Unlock()
+
+	if client != nil || clientInitErr != nil {
+		return client, clientInitErr
+	}
+
+	creds, err := CredentialsFromEnv()
 	if err != nil {
-		log.Printf("[MOCK SHEETS] Upsert student %s: %+v", st.StudentID, st)
-		return nil
+		clientInitErr = err
+		return nil, err
 	}
 
-	entryTimeStr := "-"
-	if st.RegisteredAt != nil {
-		entryTimeStr = st.RegisteredAt.Format("2006-01-02 15:04:05")
-	} else if !st.UpdatedAt.IsZero() {
-		entryTimeStr = st.UpdatedAt.Format("2006-01-02 15:04:05")
+	srv, err := sheets.NewService(ctx,
+		option.WithCredentialsJSON(creds),
+		// Sheets needs the spreadsheets scope; the credential may also be used
+		// for Firestore, where scopes are supplied separately.
+		option.WithScopes(sheets.SpreadsheetsScope),
+	)
+	if err != nil {
+		clientInitErr = fmt.Errorf("failed to create sheets service: %w", err)
+		return nil, clientInitErr
 	}
 
-	status := "Registered"
-	if st.IsSubmitted {
-		status = "Submitted"
-	} else if st.SelectedTrack != "" {
-		status = "In Progress"
-	}
+	client = srv
+	log.Println("[SHEETS] Google Sheets v4 service initialised.")
+	return client, nil
+}
 
-	timeTakenStr := "-"
-	if st.IsSubmitted && st.TimeTakenFormatted != "" {
-		timeTakenStr = st.TimeTakenFormatted
-	}
+// ResetClient drops the cached service, so credentials rotated at runtime are
+// picked up on the next call.
+func ResetClient() {
+	clientMu.Lock()
+	defer clientMu.Unlock()
+	client = nil
+	clientInitErr = nil
+}
 
-	submittedAtStr := "-"
-	if st.SubmittedAt != nil {
-		submittedAtStr = st.SubmittedAt.Format("2006-01-02 15:04:05")
-	}
-
-	attempted := st.CorrectCount + st.IncorrectCount
-	unattempted := st.UnattemptedCount
-	if !st.IsSubmitted && unattempted == 0 {
-		unattempted = 60
-	}
-
-	rowData := []interface{}{
-		entryTimeStr,
-		st.Name,
-		st.StudentID,
-		st.CollegeEmail,
-		st.Course,
-		st.EnrollmentNum,
-		st.SelectedTrack,
-		status,
-		attempted,
-		unattempted,
-		timeTakenStr,
-		st.TotalScore,
-		submittedAtStr,
-		"", // Rank (calculated by sort)
-	}
-
-	// 1. Fetch current Sheet data to find existing student ID row
-	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, "Sheet1!C:C").Context(ctx).Do()
-	targetRow := 0
-	if err == nil && len(resp.Values) > 0 {
-		for i, row := range resp.Values {
-			if len(row) > 0 && fmt.Sprintf("%v", row[0]) == st.StudentID {
-				targetRow = i + 1 // 1-based index
-				break
-			}
+// SpreadsheetID resolves the target spreadsheet from the environment, falling
+// back to the configured production sheet.
+func SpreadsheetID() string {
+	for _, key := range []string{"GOOGLE_SHEET_ID", "SHEET_ID", "SPREADSHEET_ID"} {
+		if v := osGetenv(key); v != "" {
+			return v
 		}
 	}
+	return ""
+}
 
-	if targetRow > 0 {
-		// Update existing row
-		rangeStr := fmt.Sprintf("Sheet1!A%d:N%d", targetRow, targetRow)
-		valueRange := &sheets.ValueRange{Values: [][]interface{}{rowData}}
-		_, err = srv.Spreadsheets.Values.Update(spreadsheetID, rangeStr, valueRange).
-			ValueInputOption("USER_ENTERED").Context(ctx).Do()
-		if err != nil {
-			log.Printf("[ERROR] Failed to update row for student %s: %v", st.StudentID, err)
-		} else {
-			log.Printf("[SHEETS] Updated row %d for student %s", targetRow, st.StudentID)
-		}
-	} else {
-		// Append new row
-		valueRange := &sheets.ValueRange{Values: [][]interface{}{rowData}}
-		_, err = srv.Spreadsheets.Values.Append(spreadsheetID, "Sheet1!A:N", valueRange).
-			ValueInputOption("USER_ENTERED").InsertDataOption("INSERT_ROWS").Context(ctx).Do()
-		if err != nil {
-			log.Printf("[ERROR] Failed to append row for student %s: %v", st.StudentID, err)
-		} else {
-			log.Printf("[SHEETS] Appended new row for student %s", st.StudentID)
-		}
+// SheetName resolves the target tab name.
+func SheetName() string {
+	if v := osGetenv("GOOGLE_SHEET_NAME"); v != "" {
+		return v
+	}
+	return defaultSheetName
+}
+
+// osGetenv is a thin indirection so this package stays trivially testable.
+var osGetenv = os.Getenv
+
+// RankStudents sorts the students purely in memory for the admin telemetry dashboard.
+func RankStudents(students []models.StudentState) []models.StudentState {
+	valid := make([]models.StudentState, 0, len(students))
+	for _, s := range students {
+		valid = append(valid, s)
 	}
 
-	// 2. Trigger auto-sort: Primary Total Marks (Col L / Index 11) DESC, Secondary Time Taken (Col K / Index 10) ASC
-	sortReq := &sheets.BatchUpdateSpreadsheetRequest{
+	sort.SliceStable(valid, func(i, j int) bool {
+		a, b := valid[i], valid[j]
+		if a.TotalScore != b.TotalScore {
+			return a.TotalScore > b.TotalScore
+		}
+		aHas, bHas := a.TimeTakenSeconds > 0, b.TimeTakenSeconds > 0
+		if aHas && bHas && a.TimeTakenSeconds != b.TimeTakenSeconds {
+			return a.TimeTakenSeconds < b.TimeTakenSeconds
+		}
+		return a.CorrectCount > b.CorrectCount
+	})
+
+	return valid
+}
+
+// SyncLeaderboardToSheet rewrites the whole transcript tab and then applies the
+// authoritative ranking. Used by the admin "Sync Sheets" button and as the
+// reconciliation pass - the sheet is a projection of Firestore, never a source
+// of truth.
+func SyncLeaderboardToSheet(ctx context.Context, spreadsheetID string, sheetID int64, students []models.StudentState) error {
+	return SyncLeaderboardToSheetWithName(ctx, spreadsheetID, SheetName(), sheetID, students)
+}
+
+// SyncLeaderboardToSheetWithName is the explicit-tab variant.
+func SyncLeaderboardToSheetWithName(ctx context.Context, spreadsheetID, sheetName string, sheetID int64, students []models.StudentState) error {
+	if spreadsheetID == "" {
+		return fmt.Errorf("spreadsheet id is empty (set GOOGLE_SHEET_ID)")
+	}
+
+	srv, err := service(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := EnsureHeaders(ctx, spreadsheetID, sheetName); err != nil {
+		return err
+	}
+
+	ranked := RankStudents(students)
+
+	rows := make([][]interface{}, 0, len(ranked)+1)
+	rows = append(rows, Header)
+	for i, s := range ranked {
+		rows = append(rows, studentRow(i+1, s))
+	}
+
+	rng := sheetName + "!A1"
+
+	// Clear first so a shrinking roster does not leave orphaned rows behind.
+	if _, err := srv.Spreadsheets.Values.Clear(spreadsheetID, rng, &sheets.ClearValuesRequest{}).Context(ctx).Do(); err != nil {
+		return fmt.Errorf("failed to clear sheet: %w", err)
+	}
+
+	vr := &sheets.ValueRange{Values: rows}
+	if _, err := srv.Spreadsheets.Values.
+		Update(spreadsheetID, rng, vr).
+		ValueInputOption("USER_ENTERED").
+		Context(ctx).Do(); err != nil {
+		return fmt.Errorf("failed to write sheet values: %w", err)
+	}
+
+	return SortLeaderboardRange(ctx, spreadsheetID, sheetID, len(rows))
+}
+
+// SortLeaderboardRange applies the dual SortSpecs required for live ranking:
+//
+// \t1. Total Marks  DESC  (highest score first)
+// \t2. Elapsed (s)   ASC   (fastest finisher wins a tie)
+//
+// Elapsed seconds is used rather than the formatted string because "05m 30s"
+// does not sort lexicographically.
+func SortLeaderboardRange(ctx context.Context, spreadsheetID string, sheetID int64, rowCount int) error {
+	if rowCount <= 1 {
+		return nil // header only - nothing to order
+	}
+
+	srv, err := service(ctx)
+	if err != nil {
+		return err
+	}
+
+	req := &sheets.BatchUpdateSpreadsheetRequest{
 		Requests: []*sheets.Request{
 			{
 				SortRange: &sheets.SortRangeRequest{
 					Range: &sheets.GridRange{
-						SheetId:          0,
-						StartRowIndex:    1, // Skip header row
+						SheetId:          sheetID,
+						StartRowIndex:    1, // preserve the header row
+						EndRowIndex:      int64(rowCount),
 						StartColumnIndex: 0,
-						EndColumnIndex:   14,
+						EndColumnIndex:   columnCount,
 					},
 					SortSpecs: []*sheets.SortSpec{
-						{DimensionIndex: 11, SortOrder: "DESCENDING"}, // Total Marks
-						{DimensionIndex: 10, SortOrder: "ASCENDING"},  // Time Taken
+						{
+							SortOrder:      "DESCENDING",
+							DimensionIndex: colTotalScore, // Total Marks
+						},
+						{
+							SortOrder:      "ASCENDING",
+							DimensionIndex: colElapsedSecs, // Elapsed (s)
+						},
 					},
 				},
 			},
 		},
 	}
 
-	_, _ = srv.Spreadsheets.BatchUpdate(spreadsheetID, sortReq).Context(ctx).Do()
+	if _, err := srv.Spreadsheets.BatchUpdate(spreadsheetID, req).Context(ctx).Do(); err != nil {
+		return fmt.Errorf("failed to sort sheet: %w", err)
+	}
 	return nil
 }
 
-// BulkExportStudents clears existing data rows and writes all students sorted by score (desc) & time taken (asc)
-// with computed rank. Used by the admin /api/admin/export-sheets endpoint.
-func BulkExportStudents(ctx context.Context, students []models.StudentState) error {
-	srv, spreadsheetID, err := getSheetsService(ctx)
+// EnsureHeaders writes the header row when it is missing or stale. It is
+// idempotent, so it is safe to call before every sync.
+func EnsureHeaders(ctx context.Context, spreadsheetID, sheetName string) error {
+	srv, err := service(ctx)
 	if err != nil {
-		log.Printf("[SHEETS BULK] %v", err)
 		return err
 	}
 
-	// Sort by TotalScore desc, tie-break by TimeTakenSeconds asc, then CorrectCount desc
-	sort.Slice(students, func(i, j int) bool {
-		if students[i].TotalScore != students[j].TotalScore {
-			return students[i].TotalScore > students[j].TotalScore
-		}
-		if students[i].TimeTakenSeconds != students[j].TimeTakenSeconds && students[i].TimeTakenSeconds > 0 && students[j].TimeTakenSeconds > 0 {
-			return students[i].TimeTakenSeconds < students[j].TimeTakenSeconds
-		}
-		return students[i].CorrectCount > students[j].CorrectCount
-	})
-
-	var rows [][]interface{}
-	for i, s := range students {
-		entryTimeStr := "-"
-		if s.RegisteredAt != nil {
-			entryTimeStr = s.RegisteredAt.Format("2006-01-02 15:04:05")
-		} else if !s.UpdatedAt.IsZero() {
-			entryTimeStr = s.UpdatedAt.Format("2006-01-02 15:04:05")
-		}
-
-		status := "Registered"
-		if s.IsSubmitted {
-			status = "Submitted"
-		} else if s.SelectedTrack != "" {
-			status = "In Progress"
-		}
-
-		timeTakenStr := "-"
-		if s.IsSubmitted && s.TimeTakenFormatted != "" {
-			timeTakenStr = s.TimeTakenFormatted
-		}
-
-		submittedAtStr := "-"
-		if s.SubmittedAt != nil {
-			submittedAtStr = s.SubmittedAt.Format("2006-01-02 15:04:05")
-		}
-
-		attempted := s.CorrectCount + s.IncorrectCount
-		unattempted := s.UnattemptedCount
-		if !s.IsSubmitted && unattempted == 0 {
-			unattempted = 60
-		}
-
-		rows = append(rows, []interface{}{
-			entryTimeStr,
-			s.Name,
-			s.StudentID,
-			s.CollegeEmail,
-			s.Course,
-			s.EnrollmentNum,
-			s.SelectedTrack,
-			status,
-			attempted,
-			unattempted,
-			timeTakenStr,
-			s.TotalScore,
-			submittedAtStr,
-			i + 1, // Rank (1-based)
-		})
-	}
-
-	// Clear existing data rows (preserve header row A1:N1)
-	_, err = srv.Spreadsheets.Values.Clear(spreadsheetID, "Sheet1!A2:N", &sheets.ClearValuesRequest{}).
-		Context(ctx).Do()
-	if err != nil {
-		log.Printf("[WARN] Failed to clear existing data rows: %v", err)
-	}
-
-	if len(rows) == 0 {
-		log.Println("[SHEETS BULK] No students to export.")
+	readRng := sheetName + "!A1:P1"
+	current, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRng).Context(ctx).Do()
+	if err == nil && len(current.Values) > 0 && len(current.Values[0]) >= columnCount {
 		return nil
 	}
 
-	// Write all rows starting from A2
-	valueRange := &sheets.ValueRange{Values: rows}
-	_, err = srv.Spreadsheets.Values.Update(spreadsheetID, "Sheet1!A2", valueRange).
-		ValueInputOption("USER_ENTERED").
-		Context(ctx).
-		Do()
+	vr := &sheets.ValueRange{Values: [][]interface{}{Header}}
+	_, err = srv.Spreadsheets.Values.
+		Update(spreadsheetID, sheetName+"!A1", vr).
+		ValueInputOption("RAW").
+		Context(ctx).Do()
 	if err != nil {
-		log.Printf("[ERROR] Bulk export write failed: %v", err)
+		return fmt.Errorf("failed to write header row: %w", err)
+	}
+	return nil
+}
+
+// SyncStudentRow upserts a single student into the sheet.
+//
+// This is the real-time path: it runs after every debounced answer and after a
+// submission, so the sheet tracks the exam live. It locates the student's row by
+// Student ID (column C) and overwrites it in place, which keeps the operation to
+// a single read plus a single write and avoids re-sorting the entire table on
+// every keystroke.
+func SyncStudentRow(ctx context.Context, student models.StudentState) error {
+	spreadsheetID := SpreadsheetID()
+	if spreadsheetID == "" {
+		return fmt.Errorf("spreadsheet id is empty (set GOOGLE_SHEET_ID)")
+	}
+
+	srv, err := service(ctx)
+	if err != nil {
 		return err
 	}
 
-	log.Printf("[SHEETS BULK] Successfully exported %d students with rankings.", len(students))
+	sheetName := SheetName()
+	if err := EnsureHeaders(ctx, spreadsheetID, sheetName); err != nil {
+		return err
+	}
+
+	ids, err := srv.Spreadsheets.Values.
+		Get(spreadsheetID, fmt.Sprintf("%s!C2:C", sheetName)).
+		Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("failed to read student id column: %w", err)
+	}
+
+	// Row 1 is the header, so the first data row is 2.
+	rowIndex := -1
+	for i, row := range ids.Values {
+		if len(row) > 0 && fmt.Sprint(row[0]) == student.StudentID {
+			rowIndex = i + 2
+			break
+		}
+	}
+
+	values := [][]interface{}{studentRow(0, student)}
+	a1 := fmt.Sprintf("%s!A%d", sheetName, rowIndex)
+	if rowIndex == -1 {
+		// New student: append at the end of column A. Rank is recomputed by the
+		// sort that follows, so a placeholder 0 is acceptable here.
+		a1 = fmt.Sprintf("%s!A%d", sheetName, len(ids.Values)+2)
+	}
+
+	vr := &sheets.ValueRange{Values: values}
+	if _, err := srv.Spreadsheets.Values.
+		Update(spreadsheetID, a1, vr).
+		ValueInputOption("USER_ENTERED").
+		Context(ctx).Do(); err != nil {
+		return fmt.Errorf("failed to upsert student row: %w", err)
+	}
+
+	// Re-rank in place. Google Sheets applies the ordering server-side, so this
+	// stays correct without the backend re-reading every row.
+	total, err := srv.Spreadsheets.Values.
+		Get(spreadsheetID, fmt.Sprintf("%s!C2:C", sheetName)).
+		Context(ctx).Do()
+	if err == nil {
+		_ = SortLeaderboardRange(ctx, spreadsheetID, ParseSheetID(), len(total.Values)+1)
+	}
+
 	return nil
+}
+
+// studentRow renders one student into the transcript column order.
+func studentRow(rank int, s models.StudentState) []interface{} {
+	if rank <= 0 {
+		rank = 0 // placeholder until the server-side sort re-ranks the table
+	}
+	return []interface{}{
+		rank,
+		s.Name,
+		s.StudentID,
+		s.CollegeEmail,
+		s.Course,
+		s.EnrollmentNum,
+		emptyDash(s.SelectedTrack),
+		status(s),
+		s.CorrectCount,
+		s.IncorrectCount,
+		unattempted(s),
+		s.TotalScore,
+		elapsedSeconds(s),
+		emptyDash(s.TimeTakenFormatted),
+		formatTime(s.SubmittedAt),
+		formatUpdated(s.UpdatedAt),
+	}
+}
+
+// elapsedSeconds returns a comparable numeric duration. In-progress students are
+// measured from their start time so the tie-breaker stays meaningful before they
+// submit.
+func elapsedSeconds(s models.StudentState) int {
+	if s.TimeTakenSeconds > 0 {
+		return s.TimeTakenSeconds
+	}
+	if s.StartedAt != nil {
+		if elapsed := int(time.Since(*s.StartedAt).Seconds()); elapsed > 0 {
+			return elapsed
+		}
+	}
+	return 0
+}
+
+func status(s models.StudentState) string {
+	switch {
+	case s.IsSubmitted:
+		return "Submitted"
+	case s.SelectedTrack != "":
+		return "In Progress"
+	default:
+		return "Registered"
+	}
+}
+
+func unattempted(s models.StudentState) int {
+	if !s.IsSubmitted && s.UnattemptedCount == 0 {
+		return 60
+	}
+	return s.UnattemptedCount
+}
+
+func formatTime(t *time.Time) string {
+	if t == nil {
+		return "-"
+	}
+	return t.Format("2006-01-02 15:04:05")
+}
+
+func formatUpdated(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.Format("2006-01-02 15:04:05")
+}
+
+func emptyDash(v string) string {
+	if v == "" {
+		return "-"
+	}
+	return v
+}
+
+// ParseSheetID converts the sheet gid from the environment (default 0, the
+// first tab) into the int64 the API expects.
+func ParseSheetID() int64 {
+	raw := osGetenv("GOOGLE_SHEET_GID")
+	if raw == "" {
+		return 0
+	}
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return id
 }

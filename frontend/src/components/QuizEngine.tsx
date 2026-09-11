@@ -4,6 +4,8 @@ import { Timer } from "./Timer";
 import {
   apiAutoSaveAnswer,
   apiSubmitQuiz,
+  EXAM_DURATION_SECONDS,
+  TOTAL_QUESTIONS,
   Question,
   StudentData,
 } from "../services/api";
@@ -33,14 +35,21 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   shuffledOrder,
   initialCurrentIndex = 0,
   initialAnswers = {},
-  initialRemainingSeconds = 4200,
+  initialRemainingSeconds = EXAM_DURATION_SECONDS,
   onSubmitted,
 }) => {
+  // Absolute exam deadline, derived once from the server-provided remaining
+  // time. Anchoring to a fixed instant (rather than decrementing a counter)
+  // means a throttled background tab, a reload or a clock drift can never buy a
+  // student extra time. When the deadline passes we force a submission.
+  const deadlineRef = useRef<number>(Date.now() + initialRemainingSeconds * 1000);
+  const totalQuestions = shuffledOrder.length || TOTAL_QUESTIONS;
   const [currentIndex, setCurrentIndex] = useState<number>(initialCurrentIndex);
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
   const [remainingSeconds, setRemainingSeconds] = useState<number>(initialRemainingSeconds);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string>("");
 
   // Anti-Cheating state
   const [violationCount, setViolationCount] = useState<number>(0);
@@ -54,28 +63,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const currentOriginalIndex = shuffledOrder[currentIndex] ?? 0;
   const currentQuestion = questions[currentOriginalIndex];
 
-  // Anti-Cheating Event Listeners (Tab Switching & Focus Loss)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setViolationCount((prev) => prev + 1);
-        setShowWarningToast(true);
-      }
-    };
 
-    const handleBlur = () => {
-      setViolationCount((prev) => prev + 1);
-      setShowWarningToast(true);
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleBlur);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleBlur);
-    };
-  }, []);
 
   // Start timer backend trigger on initial render of Question 1 if not started yet
   useEffect(() => {
@@ -85,9 +73,49 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         studentId: student.studentId,
         currentQuestion: currentIndex,
         startTimerNow: true,
-      }).catch((e) => console.warn("Failed to trigger start timer flag:", e));
+      }).catch(() => {
+        /* timer start is re-attempted on the next real auto-save */
+      });
     }
   }, [student.studentId, currentIndex, isOnline]);
+
+  // Send one answer to the backend, falling back to the durable offline queue
+  // (IndexedDB) whenever the request fails. Shared by the debounced save and by
+  // the unmount flush so the two paths can never diverge.
+  const persistAnswer = async (questionId: string, answer: string, idx: number) => {
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      try {
+        await apiAutoSaveAnswer({
+          studentId: student.studentId,
+          questionId,
+          answer,
+          currentQuestion: idx,
+        });
+        return;
+      } catch (err) {
+        console.warn("[QUIZ] Online save failed; staging answer in offline queue:", err);
+      }
+    }
+
+    await queueOfflineAnswer({ questionId, answer, currentQuestion: idx });
+  };
+
+  // Keep the latest pending save so an unmount (submit, timer expiry, route
+  // change) can flush it instead of dropping the answer.
+  const pendingSaveRef = useRef<{ questionId: string; answer: string; idx: number } | null>(null);
+
+  // Flush a debounced-but-not-yet-sent answer when the engine unmounts.
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      const pending = pendingSaveRef.current;
+      if (pending) {
+        pendingSaveRef.current = null;
+        void persistAnswer(pending.questionId, pending.answer, pending.idx);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle Option / Answer change for current question
   const handleAnswerChange = (newAns: string) => {
@@ -96,32 +124,20 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     const updatedAnswers = { ...answers, [currentQuestion.id]: newAns };
     setAnswers(updatedAnswers);
 
+    pendingSaveRef.current = {
+      questionId: currentQuestion.id,
+      answer: newAns,
+      idx: currentIndex,
+    };
+
+    // Debounce: replace an in-flight timer so only the latest keystroke is sent.
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(async () => {
-      if (navigator.onLine) {
-        try {
-          await apiAutoSaveAnswer({
-            studentId: student.studentId,
-            questionId: currentQuestion.id,
-            answer: newAns,
-            currentQuestion: currentIndex,
-          });
-        } catch (err) {
-          console.warn("Online save failed, queuing in IndexedDB...", err);
-          await queueOfflineAnswer({
-            questionId: currentQuestion.id,
-            answer: newAns,
-            currentQuestion: currentIndex,
-          });
-        }
-      } else {
-        await queueOfflineAnswer({
-          questionId: currentQuestion.id,
-          answer: newAns,
-          currentQuestion: currentIndex,
-        });
-      }
+      const pending = pendingSaveRef.current;
+      if (!pending) return;
+      pendingSaveRef.current = null;
+      await persistAnswer(pending.questionId, pending.answer, pending.idx);
     }, 250);
   };
 
@@ -129,6 +145,19 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+
+    // Cancel any debounced save that has not fired yet - the full answer set is
+    // being sent below, so a late single-answer write would be redundant.
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    const pending = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    if (pending) {
+      await persistAnswer(pending.questionId, pending.answer, pending.idx);
+    }
+
     try {
       const res = await apiSubmitQuiz({
         studentId: student.studentId,
@@ -141,24 +170,73 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         unattemptedCount: res.unattemptedCount,
       });
     } catch (err) {
+      // apiSubmitQuiz grades locally on a server failure, so reaching here means
+      // even the local evaluation could not complete.
       console.error("Submission failed:", err);
-      onSubmitted({ totalScore: 0, correctCount: 0, incorrectCount: 0, unattemptedCount: 0 });
+      setSubmitError(
+        "We could not submit your attempt. Please check your connection and try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
   }, [isSubmitting, student.studentId, answers, onSubmitted]);
 
+  // Anti-Cheating Event Listeners (Tab Switching & Focus Loss)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && violationCount < 3) {
+        setViolationCount((prev) => {
+          const newCount = prev + 1;
+          if (newCount >= 3) {
+            handleSubmit();
+          } else {
+            setShowWarningToast(true);
+          }
+          return newCount;
+        });
+      }
+    };
+
+    const handleBlur = () => {
+      if (violationCount < 3) {
+        setViolationCount((prev) => {
+          const newCount = prev + 1;
+          if (newCount >= 3) {
+            handleSubmit();
+          } else {
+            setShowWarningToast(true);
+          }
+          return newCount;
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [violationCount, handleSubmit]);
+
   // Navigation handlers
+  // Navigation only needs to persist the cursor position. Failures here are
+  // non-critical (the position is re-sent on the next answer change), so they
+  // are swallowed without noisy console warnings.
+  const persistCursor = (idx: number) => {
+    if (!isOnline) return;
+    apiAutoSaveAnswer({
+      studentId: student.studentId,
+      currentQuestion: idx,
+    }).catch(() => {});
+  };
+
   const handleNext = () => {
     if (currentIndex < shuffledOrder.length - 1) {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
-      if (isOnline) {
-        apiAutoSaveAnswer({
-          studentId: student.studentId,
-          currentQuestion: nextIdx,
-        }).catch(console.warn);
-      }
+      persistCursor(nextIdx);
     }
   };
 
@@ -166,76 +244,89 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     if (currentIndex > 0) {
       const prevIdx = currentIndex - 1;
       setCurrentIndex(prevIdx);
-      if (isOnline) {
-        apiAutoSaveAnswer({
-          studentId: student.studentId,
-          currentQuestion: prevIdx,
-        }).catch(console.warn);
-      }
+      persistCursor(prevIdx);
     }
   };
 
   const handleGridSelect = (gridIdx: number) => {
     setCurrentIndex(gridIdx);
-    if (isOnline) {
-      apiAutoSaveAnswer({
-        studentId: student.studentId,
-        currentQuestion: gridIdx,
-      }).catch(console.warn);
-    }
+    persistCursor(gridIdx);
   };
 
   const answeredCount = Object.values(answers).filter((a) => a && a.trim() !== "").length;
 
   return (
     <div className="max-w-5xl mx-auto my-6 px-4 pb-32">
-      {/* Anti-Cheat Warning Toast */}
-      {showWarningToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-rose-600/95 backdrop-blur-md text-white px-6 py-3 rounded-xl flex items-center gap-3 shadow-2xl border border-rose-400">
-          <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0" />
-          <span className="font-bold text-xs sm:text-sm">
-            Warning: Tab switching detected ({violationCount}). Do not leave the assessment window.
-          </span>
-          <button
-            onClick={() => setShowWarningToast(false)}
-            className="ml-3 p-1 rounded-lg hover:bg-rose-700 text-rose-100 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
+      {/* Strike 3: Terminated Modal */}
+      {violationCount >= 3 && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-rose-500 rounded-2xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center">
+            <AlertTriangle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
+            <h2 className="text-3xl font-black text-slate-900 mb-4">Assessment Terminated</h2>
+            <p className="text-lg text-slate-600 mb-6">
+              You have exceeded the maximum allowed tab switches. Your assessment has been permanently locked and your progress has been submitted automatically.
+            </p>
+            {isSubmitting && (
+              <div className="flex items-center justify-center gap-2 text-rose-600 font-bold text-lg">
+                <Loader2 className="w-6 h-6 animate-spin" /> Submitting...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Strike 1 & 2: Warning Overlay */}
+      {showWarningToast && violationCount < 3 && (
+        <div className="fixed inset-0 z-[100] bg-gradient-to-br from-pink-500/95 to-rose-600/95 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center border-2 border-rose-200">
+            <AlertTriangle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
+            <h2 className="text-3xl font-black text-slate-900 mb-4">Warning: Tab switching detected</h2>
+            <p className="text-lg text-slate-600 mb-8 font-medium">
+              Do not leave the assessment window. This is strike {violationCount} of 3. On the third strike, your assessment will be terminated automatically.
+            </p>
+            <button
+              onClick={() => setShowWarningToast(false)}
+              className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white bg-rose-600 hover:bg-rose-700 shadow-xl transition-all"
+            >
+              I Understand
+            </button>
+          </div>
         </div>
       )}
 
       {/* Part 3.4: Student Status & HUD */}
-      <div className="bg-slate-900/60 backdrop-blur-2xl rounded-2xl p-4 border border-white/10 shadow-2xl mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs uppercase tracking-widest font-semibold text-slate-400">
+      <div className="bg-white/90 backdrop-blur-2xl rounded-2xl p-6 border-2 border-slate-200 shadow-sm mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm uppercase tracking-widest font-semibold text-slate-500">
           <div className="flex items-center space-x-4">
             <div>
-              STUDENT: <span className="text-slate-100 font-bold ml-1">{student.name}</span>
+              STUDENT: <span className="text-slate-900 font-bold ml-1">{student.name}</span>
             </div>
-            <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />
+            <div className="h-5 w-[2px] bg-slate-200 hidden sm:block" />
             <div>
-              ID: <span className="font-mono text-amber-400 font-bold ml-1">{student.studentId}</span>
+              ID: <span className="font-mono text-blue-600 font-bold ml-1">{student.studentId}</span>
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1.5">
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-2 text-lg">
               <span>ANSWERED:</span>
-              <span className="font-mono text-emerald-400 font-bold text-sm">{answeredCount} / 60</span>
+              <span className="font-mono text-emerald-600 font-bold">
+                {answeredCount} / {totalQuestions}
+              </span>
             </div>
             <Timer initialSeconds={remainingSeconds} onExpire={handleSubmit} />
             <button
               onClick={() => setShowConfirmModal(true)}
-              className="py-2 px-4 rounded-xl font-bold text-xs text-slate-950 bg-amber-500 hover:bg-amber-400 shadow-lg shadow-amber-500/20 transition-all flex items-center gap-1.5"
+              className="py-3 px-6 border-2 border-transparent rounded-xl font-bold text-base text-white bg-pink-500 hover:bg-pink-600 shadow-md transition-all flex items-center gap-2"
             >
-              <Send className="w-3.5 h-3.5" /> Submit
+              <Send className="w-5 h-5" /> Submit
             </button>
           </div>
         </div>
       </div>
 
       {/* Question Component */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         {currentQuestion ? (
           <QuestionCard
             question={currentQuestion}
@@ -245,46 +336,46 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
             onAnswerChange={handleAnswerChange}
           />
         ) : (
-          <div className="p-8 text-center text-slate-400 bg-slate-900/60 backdrop-blur-2xl rounded-2xl border border-white/10">
+          <div className="p-12 text-center text-slate-500 bg-white/90 backdrop-blur-2xl rounded-2xl border-2 border-slate-200 text-lg">
             Kindly wait a moment.
           </div>
         )}
 
         {/* Navigation Controls */}
-        <div className="flex items-center justify-between bg-slate-900/60 backdrop-blur-2xl rounded-2xl p-4 border border-white/10 shadow-lg">
+        <div className="flex items-center justify-between bg-white/90 backdrop-blur-2xl rounded-2xl p-6 border-2 border-slate-200 shadow-sm">
           <button
             onClick={handlePrevious}
             disabled={currentIndex === 0}
-            className="py-2.5 px-5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all border border-white/10"
+            className="py-4 px-6 rounded-xl text-lg font-bold border-2 border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
           >
-            <ArrowLeft className="w-4 h-4" /> Previous
+            <ArrowLeft className="w-5 h-5" /> Previous
           </button>
 
-          <span className="text-xs font-mono font-semibold text-slate-400">
-            QUESTION <span className="text-amber-400 font-bold">{currentIndex + 1}</span> / {shuffledOrder.length}
+          <span className="text-base font-mono font-bold text-slate-500">
+            QUESTION <span className="text-blue-600 font-black text-xl">{currentIndex + 1}</span> / {shuffledOrder.length}
           </span>
 
           {currentIndex < shuffledOrder.length - 1 ? (
             <button
               onClick={handleNext}
-              className="py-2.5 px-5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all"
+              className="py-4 px-6 rounded-xl text-lg font-bold border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md transition-all"
             >
-              Next <ArrowRight className="w-4 h-4" />
+              Next <ArrowRight className="w-5 h-5" />
             </button>
           ) : (
             <button
               onClick={() => setShowConfirmModal(true)}
-              className="py-2.5 px-5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all"
+              className="py-4 px-6 rounded-xl text-lg font-bold border-2 border-pink-500 bg-pink-500 hover:bg-pink-600 text-white flex items-center gap-2 shadow-md transition-all"
             >
-              Review & Submit <CheckCircle className="w-4 h-4" />
+              Review & Submit <CheckCircle className="w-5 h-5" />
             </button>
           )}
         </div>
       </div>
 
       {/* Part 3.2: Fixed Bottom Question Carousel */}
-      <div className="fixed bottom-0 left-0 w-full h-24 bg-slate-950/95 backdrop-blur-xl border-t border-white/10 z-50">
-        <div className="flex flex-row overflow-x-auto scrollbar-hide items-center gap-3 px-6 h-full max-w-7xl mx-auto">
+      <div className="fixed bottom-0 left-0 w-full h-28 bg-white/95 backdrop-blur-xl border-t border-slate-200 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="flex flex-row overflow-x-auto scrollbar-hide items-center gap-4 px-6 h-full max-w-7xl mx-auto">
           {shuffledOrder.map((origIdx, displayIdx) => {
             const q = questions[origIdx];
             const isAnswered = q && answers[q.id] && answers[q.id].trim() !== "";
@@ -294,12 +385,12 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
               <button
                 key={q ? q.id : displayIdx}
                 onClick={() => handleGridSelect(displayIdx)}
-                className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-lg font-mono text-sm font-bold border transition-all duration-200 ${
+                className={`w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-xl font-mono text-lg font-bold border-2 transition-all duration-200 ${
                   isCurrent
-                    ? "bg-amber-500 text-slate-950 border-amber-400 scale-110 shadow-[0_0_15px_rgba(245,158,11,0.4)] z-10"
+                    ? "bg-blue-600 text-white border-blue-600 scale-110 shadow-lg z-10"
                     : isAnswered
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                    : "bg-slate-900 text-slate-500 border-white/5 hover:border-white/20"
+                    ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                    : "bg-slate-50 text-slate-400 border-slate-200 hover:border-blue-300 hover:text-blue-500"
                 }`}
               >
                 {displayIdx + 1}
@@ -311,18 +402,24 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center">
-            <h3 className="text-xl font-bold text-slate-100 mb-2">Confirm Quiz Submission</h3>
-            <p className="text-xs text-slate-400 mb-6">
-              You have answered <strong className="text-amber-400 font-mono">{answeredCount}</strong> out of{" "}
-              <strong className="text-amber-400 font-mono">{shuffledOrder.length}</strong> questions. Are you sure you want to finish?
+        <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-10 max-w-lg w-full shadow-2xl text-center">
+            <h3 className="text-2xl font-black text-slate-900 mb-2">Confirm Quiz Submission</h3>
+            <p className="text-base text-slate-600 mb-8 font-medium">
+              You have answered <strong className="text-blue-600 font-mono text-lg">{answeredCount}</strong> out of{" "}
+              <strong className="text-blue-600 font-mono text-lg">{shuffledOrder.length}</strong> questions. Are you sure you want to finish?
             </p>
 
-            <div className="flex items-center gap-3 pt-2">
+            {submitError && (
+              <p className="mb-6 text-sm font-bold text-rose-600 bg-rose-50 border-2 border-rose-200 rounded-xl px-4 py-3">
+                {submitError}
+              </p>
+            )}
+
+            <div className="flex items-center gap-4 pt-2">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-3 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 border border-white/10"
+                className="flex-1 py-4 rounded-xl font-bold text-lg text-slate-600 bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 transition-all"
               >
                 Continue Quiz
               </button>
@@ -330,11 +427,11 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="flex-1 py-3 rounded-xl font-bold text-xs text-slate-950 bg-emerald-500 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+                className="flex-1 py-4 rounded-xl font-bold text-lg text-white bg-pink-500 hover:bg-pink-600 shadow-lg border-2 border-transparent transition-all flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Submitting...
+                    <Loader2 className="w-5 h-5 animate-spin" /> Submitting...
                   </>
                 ) : (
                   "Yes, Submit Now"

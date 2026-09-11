@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -32,8 +33,32 @@ type SubmitResponse struct {
 	SubmittedAt      time.Time `json:"submittedAt"`
 }
 
-// SubmitQuiz grades all answers, updates Firestore, and appends the final score row
-// to Google Sheets with auto-sort ranking.
+// syncStudentToSheetInBackground mirrors one student's final record to the live
+// Google Sheet without blocking the HTTP response.
+//
+// A per-row upsert is used rather than rewriting the whole transcript: the row
+// already exists from the real-time answer syncs, so this is a single read plus
+// a single write. The full-table reconciliation is available on demand via the
+// admin "Sync Sheets" endpoint.
+func syncStudentToSheetInBackground(student models.StudentState) {
+	if sheets.SpreadsheetID() == "" {
+		return // Sheets not configured; Firestore remains the source of truth
+	}
+
+	go func(st models.StudentState) {
+		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+		defer cancel()
+
+		if err := sheets.SyncStudentRow(ctx, st); err != nil {
+			log.Printf("[SHEETS] final row sync failed for %s: %v", st.StudentID, err)
+			return
+		}
+		log.Printf("[SHEETS] final row synced for %s", st.StudentID)
+	}(student)
+}
+
+// SubmitQuiz grades all answers, persists the final score, syncs to Google
+// Sheets in real time, and returns the result.
 func SubmitQuiz(store *db.Store, dataPath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var payload SubmitPayload
@@ -153,15 +178,11 @@ func SubmitQuiz(store *db.Store, dataPath string) http.HandlerFunc {
 		}
 
 		if err := store.UpsertStudentMap(ctx, student.StudentID, updates); err != nil {
-			log.Printf("[WARN] Error persisting final score to Firestore: %v", err)
+			log.Printf("[WARN] Error persisting final score: %v", err)
 		}
 
-		// Async export & auto-sort to Google Sheets
-		go func(st *models.StudentState) {
-			if err := sheets.UpsertStudentRow(context.Background(), st); err != nil {
-				log.Printf("[ERROR] Google Sheets export failed for student %s: %v", st.StudentID, err)
-			}
-		}(student)
+		// Fire-and-forget: mirror this student's final row to the live Sheet.
+		syncStudentToSheetInBackground(*student)
 
 		resp := SubmitResponse{
 			Status:           "submitted",

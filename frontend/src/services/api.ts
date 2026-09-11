@@ -2,6 +2,12 @@ import { getFallbackQuestions } from "../data/fallbackQuestions";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
+// Single source of truth for the exam duration. The backend uses the identical
+// value (3600s) in handlers/get_state.go, so the countdown, the local recovery
+// fallback and the server expiry check can never disagree.
+export const EXAM_DURATION_SECONDS = 3600; // 60 minutes
+export const TOTAL_QUESTIONS = 60;
+
 export interface StudentData {
   studentId: string;
   name: string;
@@ -46,6 +52,7 @@ export interface AdminLeaderboardEntry {
   timeTakenSeconds?: number;
   timeTakenFormatted?: string;
   isSubmitted: boolean;
+  registeredAt?: string;
 }
 
 export async function fetchWithRetry(
@@ -167,29 +174,38 @@ export async function apiAutoSaveAnswer(payload: {
   currentQuestion: number;
   startTimerNow?: boolean;
 }): Promise<void> {
+  // The local mirror is always updated, so the answer survives even if the
+  // server call fails. We then rethrow on server failure so callers
+  // (useOfflineSync / QuizEngine) can enqueue the answer for retry instead of
+  // believing it was persisted.
+  const mirrorLocally = () => {
+    const existing = getLocalStudent(payload.studentId);
+    if (!existing) return;
+
+    const answers = existing.answers || {};
+    if (payload.questionId && payload.answer !== undefined) {
+      answers[payload.questionId] = payload.answer;
+    }
+    existing.answers = answers;
+    existing.currentQuestion = payload.currentQuestion;
+    if (!existing.startedAt && payload.startTimerNow) {
+      existing.startedAt = new Date().toISOString();
+    }
+    saveLocalStudent(existing);
+  };
+
   try {
     const res = await fetchWithRetry("/save-answer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error("Server error on save-answer");
+    if (!res.ok) throw new Error(`Server error on save-answer (${res.status})`);
+    mirrorLocally();
   } catch (err) {
-    console.warn("[API Fallback] Backend unreachable on /save-answer. Auto-saving answer locally:", err);
-  } finally {
-    const existing = getLocalStudent(payload.studentId);
-    if (existing) {
-      const answers = existing.answers || {};
-      if (payload.questionId && payload.answer !== undefined) {
-        answers[payload.questionId] = payload.answer;
-      }
-      existing.answers = answers;
-      existing.currentQuestion = payload.currentQuestion;
-      if (!existing.startedAt && payload.startTimerNow) {
-        existing.startedAt = new Date().toISOString();
-      }
-      saveLocalStudent(existing);
-    }
+    mirrorLocally();
+    console.warn("[API] /save-answer unreachable - answer staged in local queue:", err);
+    throw err;
   }
 }
 
@@ -209,7 +225,7 @@ export async function apiGetState(studentId: string): Promise<{
     console.warn("[API Fallback] Backend unreachable on /state. Checking local storage:", err);
     const local = getLocalStudent(studentId);
     if (local && local.studentId) {
-      const totalExamSeconds = 4200; // 70 mins
+      const totalExamSeconds = EXAM_DURATION_SECONDS;
       let remainingSeconds = totalExamSeconds;
       let timeExpired = false;
 
@@ -261,6 +277,9 @@ export async function apiSubmitQuiz(payload: {
   incorrectCount: number;
   unattemptedCount: number;
   submittedAt: string;
+  // True when the result was produced locally because the backend was
+  // unreachable, so the UI can warn instead of silently trusting it.
+  gradedLocally?: boolean;
 }> {
   try {
     const res = await fetchWithRetry("/submit", {
@@ -308,7 +327,7 @@ export async function apiSubmitQuiz(payload: {
     }
 
     return {
-      status: "submitted",
+      status: "submitted_locally",
       studentId: payload.studentId,
       totalScore,
       maxScore: 60,
@@ -316,6 +335,7 @@ export async function apiSubmitQuiz(payload: {
       incorrectCount,
       unattemptedCount,
       submittedAt: now,
+      gradedLocally: true,
     };
   }
 }
@@ -323,21 +343,31 @@ export async function apiSubmitQuiz(payload: {
 // Admin Leaderboard Fetch (polling endpoint)
 export async function apiGetAdminLeaderboard(adminKey: string): Promise<{
   totalStudents: number;
+  submittedCount?: number;
+  averageScore?: number;
+  lastUpdated?: string;
+  persistenceMode?: string;
+  persistenceNote?: string;
   students: AdminLeaderboardEntry[];
 }> {
   try {
-    const res = await fetchWithRetry("/admin/leaderboard", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Admin-Key": adminKey,
+    const res = await fetchWithRetry(
+      "/admin/leaderboard",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Key": adminKey,
+        },
       },
-    });
+      // Admin polling must fail fast and never retry-storm the backend.
+      0
+    );
     if (!res.ok) throw new Error("Leaderboard fetch failed");
     return await res.json();
   } catch (err) {
     console.warn("[Admin API Fallback] Backend unreachable for admin leaderboard. Building local leaderboard:", err);
-    
+
     // Collect all local students stored in localStorage
     const students: AdminLeaderboardEntry[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -376,19 +406,33 @@ export async function apiGetAdminLeaderboard(adminKey: string): Promise<{
   }
 }
 
-// Admin Bulk Export to Google Sheets
-export async function apiTriggerBulkExport(adminKey: string): Promise<{
-  status: string;
-  studentsCount: number;
-  message: string;
-}> {
-  const res = await fetchWithRetry("/admin/export-sheets", {
+// Admin Excel Export — triggers a direct browser download of the ranked .xlsx
+// workbook. We cannot fetch() + blob() here because the download must work even
+// when the backend CORS origin does not match, so we navigate the browser to the
+// endpoint with the key as a query parameter.
+export async function apiSyncSheets(adminKey: string): Promise<void> {
+  const url = `${BASE_URL}/admin/sync-sheets`;
+  const res = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
       "X-Admin-Key": adminKey,
+      "Content-Type": "application/json",
     },
   });
-  if (!res.ok) throw new Error("Bulk export failed");
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to sync with Google Sheets");
+  }
+}
+
+// Backend/persistence health probe for the admin dashboard status card.
+export async function apiGetHealth(): Promise<{
+  status: string;
+  backend: string;
+  reason: string;
+  firestore: boolean;
+}> {
+  const res = await fetchWithRetry("/health", { method: "GET" }, 0);
+  if (!res.ok) throw new Error("Health probe failed");
   return await res.json();
 }

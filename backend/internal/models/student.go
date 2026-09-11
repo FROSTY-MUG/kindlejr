@@ -4,13 +4,13 @@ import "time"
 
 // StudentState holds full details and quiz progress for a student.
 type StudentState struct {
-	StudentID        string            `firestore:"studentId" json:"studentId"`
-	Name             string            `firestore:"name" json:"name"`
-	PersonalEmail    string            `firestore:"personalEmail" json:"personalEmail"`
-	CollegeEmail     string            `firestore:"collegeEmail" json:"collegeEmail"`
-	Course           string            `firestore:"course" json:"course"`
-	EnrollmentNum    string            `firestore:"enrollmentNum" json:"enrollmentNum"`
-	SelectedTrack    string            `firestore:"selectedTrack" json:"selectedTrack"` // "C" or "Python"
+	StudentID          string            `firestore:"studentId" json:"studentId"`
+	Name               string            `firestore:"name" json:"name"`
+	PersonalEmail      string            `firestore:"personalEmail" json:"personalEmail"`
+	CollegeEmail       string            `firestore:"collegeEmail" json:"collegeEmail"`
+	Course             string            `firestore:"course" json:"course"`
+	EnrollmentNum      string            `firestore:"enrollmentNum" json:"enrollmentNum"`
+	SelectedTrack      string            `firestore:"selectedTrack" json:"selectedTrack"` // "C" or "Python"
 	RegisteredAt       *time.Time        `firestore:"registeredAt,omitempty" json:"registeredAt,omitempty"`
 	StartedAt          *time.Time        `firestore:"startedAt,omitempty" json:"startedAt,omitempty"`
 	CurrentQuestion    int               `firestore:"currentQuestion" json:"currentQuestion"`

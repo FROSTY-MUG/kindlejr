@@ -9,12 +9,14 @@ const GoldenGlitterCanvas = dynamic(
     ssr: false,
     loading: () => (
       <div className="fixed inset-0 pointer-events-none -z-10 bg-slate-950 flex items-center justify-center text-amber-400 font-mono text-xs overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center scale-110 opacity-70"
+        <img
+          src="/geu-logo.png"
+          alt=""
+          className="absolute w-[80vw] max-w-[900px] h-auto select-none pointer-events-none"
           style={{
-            backgroundImage: "url('/geu-building.jpg')",
-            filter: "blur(45px) brightness(0.7)",
-            WebkitFilter: "blur(45px) brightness(0.7)",
+            filter: "blur(50px) brightness(0.6) saturate(0.3)",
+            WebkitFilter: "blur(50px) brightness(0.6) saturate(0.3)",
+            opacity: 0.5,
           }}
         />
         <div className="absolute inset-0 bg-slate-950/70" />

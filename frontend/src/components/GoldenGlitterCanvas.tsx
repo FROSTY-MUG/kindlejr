@@ -68,18 +68,22 @@ function GoldenGlitterParticles() {
 export function GoldenGlitterCanvas() {
   return (
     <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden bg-slate-950">
-      {/* GEU Building Background Image with 45px Blur (40-50px range) */}
-      <div
-        className="absolute inset-0 bg-cover bg-center scale-110 opacity-70 transform-gpu"
-        style={{
-          backgroundImage: "url('/geu-building.jpg')",
-          filter: "blur(45px) brightness(0.7)",
-          WebkitFilter: "blur(45px) brightness(0.7)",
-        }}
-      />
+      {/* GEU Logo Background with 50% Blur */}
+      <div className="absolute inset-0 flex items-center justify-center transform-gpu">
+        <img
+          src="/geu-logo.png"
+          alt=""
+          className="w-[80vw] max-w-[900px] h-auto select-none pointer-events-none"
+          style={{
+            filter: "blur(50px) brightness(0.6) saturate(0.3)",
+            WebkitFilter: "blur(50px) brightness(0.6) saturate(0.3)",
+            opacity: 0.5,
+          }}
+        />
+      </div>
 
       {/* Sleek Dark Vignette Gradient for UI readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/50 to-slate-950/90" />
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/40 to-slate-950/80" />
 
       {/* Interactive 3D Golden Glitter Particles */}
       <Canvas camera={{ position: [0, 0, 7], fov: 60 }}>

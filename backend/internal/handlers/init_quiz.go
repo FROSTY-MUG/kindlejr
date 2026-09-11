@@ -49,16 +49,8 @@ func InitQuiz(store *db.Store) http.HandlerFunc {
 			return
 		}
 
-		// Async update Sheets status to In Progress
-		go func() {
-			st, err := store.GetStudent(context.Background(), payload.StudentID)
-			if err == nil && st != nil {
-				_ = sheets.UpsertStudentRow(context.Background(), st)
-			}
-		}()
-
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}
 }

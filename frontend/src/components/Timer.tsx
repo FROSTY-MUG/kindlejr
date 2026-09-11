@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Clock, AlertTriangle } from "lucide-react";
 
 interface TimerProps {
@@ -6,32 +6,65 @@ interface TimerProps {
   onExpire: () => void;
 }
 
+// Timer is deadline-anchored rather than tick-counted.
+//
+// The previous implementation decremented a counter inside setInterval and had
+// secondsLeft in its effect dependency list, so the interval was torn down and
+// rebuilt every second. Browsers throttle (or fully suspend) timers in hidden
+// and background tabs, so the count would silently fall behind wall-clock time
+// and hand the student extra minutes. Deriving the display from a fixed deadline
+// keeps it truthful no matter how the tab is scheduled.
 export const Timer: React.FC<TimerProps> = ({ initialSeconds, onExpire }) => {
-  const [secondsLeft, setSecondsLeft] = useState<number>(initialSeconds);
+  const deadlineRef = useRef<number>(Date.now() + initialSeconds * 1000);
+  const firedRef = useRef<boolean>(false);
+  const onExpireRef = useRef(onExpire);
 
+  const computeSecondsLeft = () =>
+    Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
+
+  const [secondsLeft, setSecondsLeft] = useState<number>(computeSecondsLeft);
+
+  // Re-arm whenever the server supplies a fresh duration (e.g. state recovery).
   useEffect(() => {
-    setSecondsLeft(initialSeconds);
+    deadlineRef.current = Date.now() + initialSeconds * 1000;
+    firedRef.current = false;
+    setSecondsLeft(computeSecondsLeft());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSeconds]);
 
+  // Keep the latest callback without restarting the interval.
   useEffect(() => {
-    if (secondsLeft <= 0) {
-      onExpire();
-      return;
-    }
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
 
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onExpire();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  useEffect(() => {
+    const tick = () => {
+      const left = computeSecondsLeft();
+      setSecondsLeft(left);
 
-    return () => clearInterval(interval);
-  }, [secondsLeft, onExpire]);
+      // Fire exactly once, and only when the deadline is genuinely reached.
+      if (left <= 0 && !firedRef.current) {
+        firedRef.current = true;
+        onExpireRef.current();
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+
+    // A tab that was suspended resumes with an immediate correction instead of
+    // waiting up to a second to notice the deadline has passed.
+    const handleVisible = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", handleVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;

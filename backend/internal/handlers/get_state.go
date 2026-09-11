@@ -37,12 +37,12 @@ func GetState(store *db.Store) http.HandlerFunc {
 			return
 		}
 
-		remainingSeconds := 4200 // 70 minutes default
+		remainingSeconds := 3600 // 60 minutes default
 		timeExpired := false
 
 		if student.StartedAt != nil {
 			elapsed := time.Now().UTC().Sub(*student.StartedAt).Seconds()
-			remainingSeconds = 4200 - int(elapsed)
+			remainingSeconds = 3600 - int(elapsed)
 			if remainingSeconds <= 0 {
 				remainingSeconds = 0
 				timeExpired = true

@@ -1,16 +1,19 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"kindle-jr/internal/db"
 	"kindle-jr/internal/models"
+	"kindle-jr/internal/sheets"
 	"kindle-jr/internal/utils"
 )
 
@@ -22,9 +25,12 @@ type AutoSavePayload struct {
 	StartTimerNow   bool   `json:"startTimerNow"`
 }
 
-// RealTimeAutoSaveAnswer handles debounced answer selection, performs real-time partial grading,
-// and persists the updated state to Firestore.
-// Google Sheets export only happens on final submission (SubmitQuiz), not on every auto-save.
+// RealTimeAutoSaveAnswer handles debounced answer selection, performs real-time
+// partial grading and persists the updated state.
+//
+// Performance note: this endpoint runs on every debounced keystroke, so it does
+// no network I/O of its own. The answer key is served from an in-process cache
+// and persistence is non-blocking (see Store.UpsertStudentMap).
 func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var payload AutoSavePayload
@@ -119,6 +125,21 @@ func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 			return
 		}
 
+		// Dual-write: mirror the updated record to the live Google Sheet. This
+		// runs on a detached context in its own goroutine so a slow Sheets API
+		// can never add latency to the keystroke path or fail the request. The
+		// sheet is a projection of Firestore, so a dropped sync simply heals on
+		// the next keystroke or on the admin reconciliation pass.
+		syncSnapshot := *existingState
+		syncSnapshot.UpdatedAt = time.Now().UTC()
+		go func(st models.StudentState) {
+			syncCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+			if err := sheets.SyncStudentRow(syncCtx, st); err != nil {
+				log.Printf("[SHEETS] real-time row sync failed for %s: %v", st.StudentID, err)
+			}
+		}(syncSnapshot)
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -132,31 +153,59 @@ func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 	}
 }
 
-func loadAnswerKey(dataPath, track string) map[string]string {
-	answerKey := make(map[string]string)
+// answerKeyCache memoises the parsed answer keys per track. The question bank
+// is static for the lifetime of the process, so reading and JSON-parsing it on
+// every keystroke was pure waste - it is now read once per track and reused.
+var (
+	answerKeyMu    sync.RWMutex
+	answerKeyCache = map[string]map[string]string{}
+)
 
-	aptBytes, err := os.ReadFile(filepath.Join(dataPath, "questions_aptitude.json"))
-	if err == nil {
+// loadAnswerKey returns the QuestionID -> correct answer map for a track,
+// reading the JSON files only on the first call for that track.
+func loadAnswerKey(dataPath, track string) map[string]string {
+	cacheKey := strings.ToLower(track) + "|" + dataPath
+	answerKeyMu.RLock()
+	cached, ok := answerKeyCache[cacheKey]
+	answerKeyMu.RUnlock()
+	if ok {
+		return cached
+	}
+
+	answerKey := map[string]string{}
+
+	if aptBytes, err := os.ReadFile(filepath.Join(dataPath, "questions_aptitude.json")); err == nil {
 		var aptitudeQuestions []models.Question
 		if json.Unmarshal(aptBytes, &aptitudeQuestions) == nil {
 			for _, q := range aptitudeQuestions {
 				answerKey[q.ID] = q.Answer
 			}
 		}
+	} else {
+		log.Printf("[ANSWERKEY] Could not read aptitude bank from %s: %v", dataPath, err)
 	}
 
 	codeFile := "questions_c.json"
 	if strings.ToLower(track) == "python" {
 		codeFile = "questions_python.json"
 	}
-	codeBytes, err := os.ReadFile(filepath.Join(dataPath, codeFile))
-	if err == nil {
+	if codeBytes, err := os.ReadFile(filepath.Join(dataPath, codeFile)); err == nil {
 		var codingQuestions []models.Question
 		if json.Unmarshal(codeBytes, &codingQuestions) == nil {
 			for _, q := range codingQuestions {
 				answerKey[q.ID] = q.Answer
 			}
 		}
+	} else {
+		log.Printf("[ANSWERKEY] Could not read coding bank %s: %v", codeFile, err)
+	}
+
+	// Only cache a fully-populated key; an empty map would permanently mask a
+	// transient startup error (e.g. a volume not yet mounted).
+	if len(answerKey) > 0 {
+		answerKeyMu.Lock()
+		answerKeyCache[cacheKey] = answerKey
+		answerKeyMu.Unlock()
 	}
 
 	return answerKey

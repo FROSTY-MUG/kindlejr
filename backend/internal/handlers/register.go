@@ -57,28 +57,8 @@ func RegisterStudent(store *db.Store) http.HandlerFunc {
 			return
 		}
 
-		// Async sync registration entry to Google Sheets
-		go func() {
-			st, err := store.GetStudent(context.Background(), payload.StudentID)
-			if err == nil && st != nil {
-				_ = sheets.UpsertStudentRow(context.Background(), st)
-			} else {
-				stFallback := &models.StudentState{
-					StudentID:     payload.StudentID,
-					Name:          payload.Name,
-					PersonalEmail: payload.PersonalEmail,
-					CollegeEmail:  payload.CollegeEmail,
-					Course:        payload.Course,
-					EnrollmentNum: payload.EnrollmentNum,
-					RegisteredAt:  registeredAt,
-					UpdatedAt:     now,
-				}
-				_ = sheets.UpsertStudentRow(context.Background(), stFallback)
-			}
-		}()
-
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}
 }

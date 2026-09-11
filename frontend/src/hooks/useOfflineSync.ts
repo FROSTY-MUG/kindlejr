@@ -25,24 +25,43 @@ export function useOfflineSync(studentId: string) {
     }
   }, []);
 
+  // Flush the offline queue, keeping any entry that fails to send.
+  //
+  // The previous implementation deleted the entire queue after the loop, so a
+  // single network error mid-flush silently discarded every remaining answer.
+  // We now remove only the entries that were acknowledged.
   const flushQueue = useCallback(async () => {
-    if (!navigator.onLine) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
     try {
       const queue: PendingAnswerPayload[] = (await get(OFFLINE_QUEUE_KEY)) || [];
-      if (queue.length === 0) return;
-
-      for (const item of queue) {
-        await apiAutoSaveAnswer({
-          studentId: item.studentId,
-          questionId: item.questionId,
-          answer: item.answer,
-          currentQuestion: item.currentQuestion,
-        });
+      if (queue.length === 0) {
+        setPendingCount(0);
+        return;
       }
 
-      await del(OFFLINE_QUEUE_KEY);
-      setPendingCount(0);
-      console.log("[OFFLINE SYNC] Successfully flushed offline queued answers to Go backend.");
+      const remaining: PendingAnswerPayload[] = [];
+      for (const item of queue) {
+        try {
+          await apiAutoSaveAnswer({
+            studentId: item.studentId,
+            questionId: item.questionId,
+            answer: item.answer,
+            currentQuestion: item.currentQuestion,
+          });
+        } catch {
+          remaining.push(item);
+        }
+      }
+
+      if (remaining.length === 0) {
+        await del(OFFLINE_QUEUE_KEY);
+      } else {
+        await set(OFFLINE_QUEUE_KEY, remaining);
+      }
+      setPendingCount(remaining.length);
+      console.log(
+        `[OFFLINE SYNC] Flushed ${queue.length - remaining.length}/${queue.length} queued answers.`
+      );
     } catch (err) {
       console.error("[OFFLINE SYNC] Failed to flush offline queue:", err);
     }
