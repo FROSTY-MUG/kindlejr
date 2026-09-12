@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
         studentData.answers = { ...(studentData.answers || {}), ...answers };
       }
 
-      const finalStrikes = strikesCount !== undefined ? strikesCount : (studentData.strikesCount || 0);
+      const finalStrikes = strikesCount !== undefined ? strikesCount : (studentData.violationCount || studentData.strikesCount || 0);
+      studentData.violationCount = finalStrikes;
       studentData.strikesCount = finalStrikes;
       studentData.cheated = !!(cheated || finalStrikes >= 2 || studentData.cheated);
 

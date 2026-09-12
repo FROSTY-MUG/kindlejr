@@ -8,7 +8,6 @@ import {
   Trophy,
   Activity,
   CheckCircle2,
-  Download,
   ExternalLink,
 } from "lucide-react";
 import {
@@ -123,62 +122,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
     }
   };
 
-  // Download CSV / Excel file for submissions & leaderboard
-  const handleDownloadExcel = () => {
-    if (!leaderboard || leaderboard.length === 0) {
-      alert("No student submissions recorded yet to export.");
-      return;
-    }
-
-    const headers = [
-      "Rank",
-      "Full Name",
-      "Student ID",
-      "College Email",
-      "Enrollment Number",
-      "Course",
-      "Track",
-      "Strikes",
-      "Integrity Status",
-      "Status",
-      "Correct",
-      "Incorrect",
-      "Unattempted",
-      "Total Marks",
-      "Time Taken",
-      "Submitted At"
-    ];
-
-    const rows = leaderboard.map((s) => [
-      s.rank,
-      `"${(s.name || "").replace(/"/g, '""')}"`,
-      `"${(s.studentId || "").replace(/"/g, '""')}"`,
-      `"${(s.collegeEmail || "").replace(/"/g, '""')}"`,
-      `"${(s.enrollmentNum || "").replace(/"/g, '""')}"`,
-      `"${(s.course || "").replace(/"/g, '""')}"`,
-      `"${(s.selectedTrack || "-").replace(/"/g, '""')}"`,
-      s.strikesCount || 0,
-      s.cheated || (s.strikesCount && s.strikesCount >= 2) ? "Disqualified (Cheated)" : s.strikesCount === 1 ? "1 Warning" : "Clean",
-      s.isSubmitted ? "Submitted" : "In Progress",
-      s.correctCount,
-      s.incorrectCount,
-      s.unattemptedCount,
-      s.totalScore,
-      `"${s.timeTakenFormatted || "-"}"`,
-      `"${s.registeredAt || "-"}"`
-    ]);
-
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `kindle_jr_5_0_submissions_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-900 font-sans selection:bg-blue-200 selection:text-blue-900 pt-20 pb-16">
       {/* Fixed Top Bar Header */}
@@ -288,15 +231,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                 )}
                 Sync Sheets
-              </button>
-
-              <button
-                onClick={handleDownloadExcel}
-                className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow border border-emerald-500 flex items-center gap-1.5 transition-all"
-                title="Download Excel / CSV file"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export CSV
               </button>
 
               <a

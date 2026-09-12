@@ -6,7 +6,7 @@ import { syncStudentRow } from "../../../lib/sheets";
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
-    const { studentId, questionId, answer, currentQuestion, startTimerNow } = payload;
+    const { studentId, questionId, answer, currentQuestion, startTimerNow, violationCount } = payload;
 
     if (!studentId) {
       return NextResponse.json({ error: "studentId is required" }, { status: 400 });
@@ -27,6 +27,15 @@ export async function POST(req: NextRequest) {
       const snap = await docRef.get();
       if (snap.exists) {
         studentData = { ...snap.data(), ...studentData };
+      }
+
+      if (violationCount !== undefined) {
+        const vNum = Number(violationCount) || 0;
+        studentData.violationCount = Math.max(studentData.violationCount || 0, vNum);
+        studentData.strikesCount = studentData.violationCount;
+        if (studentData.violationCount >= 2) {
+          studentData.cheated = true;
+        }
       }
 
       if (!studentData.answers) studentData.answers = {};

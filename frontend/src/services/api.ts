@@ -26,6 +26,7 @@ export interface StudentData {
   incorrectCount?: number;
   unattemptedCount?: number;
   strikesCount?: number;
+  violationCount?: number;
   cheated?: boolean;
 }
 
@@ -179,6 +180,7 @@ export async function apiAutoSaveAnswer(payload: {
   answer?: string;
   currentQuestion: number;
   startTimerNow?: boolean;
+  violationCount?: number;
 }): Promise<void> {
   // The local mirror is always updated, so the answer survives even if the
   // server call fails. We then rethrow on server failure so callers
@@ -196,6 +198,13 @@ export async function apiAutoSaveAnswer(payload: {
     existing.currentQuestion = payload.currentQuestion;
     if (!existing.startedAt && payload.startTimerNow) {
       existing.startedAt = new Date().toISOString();
+    }
+    if (typeof payload.violationCount === "number") {
+      existing.violationCount = Math.max(existing.violationCount || 0, payload.violationCount);
+      existing.strikesCount = existing.violationCount;
+      if (existing.violationCount >= 2) {
+        existing.cheated = true;
+      }
     }
     saveLocalStudent(existing);
   };
@@ -274,6 +283,8 @@ export async function apiGetQuestions(track: string): Promise<Question[]> {
 export async function apiSubmitQuiz(payload: {
   studentId: string;
   answers?: Record<string, string>;
+  strikesCount?: number;
+  cheated?: boolean;
 }): Promise<{
   status: string;
   studentId: string;
