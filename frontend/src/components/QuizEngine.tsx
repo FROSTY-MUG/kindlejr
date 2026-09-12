@@ -159,15 +159,24 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>("");
 
-  // Anti-Cheating state (2-Strike Rule with storage persistence across refresh)
+  // Anti-Cheating state (2-Strike Rule with durable localStorage & Firestore persistence)
   const [violationCount, setViolationCount] = useState<number>(() => {
+    let strikes = 0;
     try {
       if (typeof window !== "undefined") {
-        const stored = sessionStorage.getItem(`kindle_strikes_${student.studentId}`);
-        if (stored) return parseInt(stored, 10) || 0;
+        const local = localStorage.getItem(`kindle_strikes_${student.studentId}`);
+        if (local) strikes = Math.max(strikes, parseInt(local, 10) || 0);
+        const sess = sessionStorage.getItem(`kindle_strikes_${student.studentId}`);
+        if (sess) strikes = Math.max(strikes, parseInt(sess, 10) || 0);
       }
     } catch {}
-    return 0;
+    if (typeof student.violationCount === "number") {
+      strikes = Math.max(strikes, student.violationCount);
+    }
+    if (typeof student.strikesCount === "number") {
+      strikes = Math.max(strikes, student.strikesCount);
+    }
+    return strikes;
   });
   const [showWarningToast, setShowWarningToast] = useState<boolean>(false);
   const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
@@ -306,6 +315,14 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const violationCountRef = useRef<number>(violationCount);
   const lastViolationTimeRef = useRef<number>(0);
 
+  // If student already has 2 strikes or cheated flag on mount, immediately terminate assessment
+  useEffect(() => {
+    if (violationCount >= 2 || student.cheated) {
+      playSecuritySiren();
+      handleSubmit(true);
+    }
+  }, []);
+
   // Anti-Cheating Event Listeners (Tab Switching, Focus Loss, F11, & Full-Screen Tampering)
   useEffect(() => {
     const handleViolation = (reason = "Violation") => {
@@ -320,9 +337,19 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       violationCountRef.current += 1;
       const newCount = violationCountRef.current;
       try {
+        localStorage.setItem(`kindle_strikes_${student.studentId}`, String(newCount));
         sessionStorage.setItem(`kindle_strikes_${student.studentId}`, String(newCount));
       } catch {}
       setViolationCount(newCount);
+
+      // Instantly push strike count to backend API so it is locked immutably in Firestore
+      apiAutoSaveAnswer({
+        studentId: student.studentId,
+        currentQuestion: currentIndex,
+        violationCount: newCount,
+      }).catch((err) => {
+        console.warn("[QUIZ] Failed to push violation count to backend:", err);
+      });
 
       if (newCount >= 2) {
         // Strike 2: Terminate assessment immediately and sound loud acoustic siren

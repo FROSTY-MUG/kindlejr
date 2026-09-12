@@ -25,5 +25,6 @@ type StudentState struct {
 	TimeTakenFormatted string            `firestore:"timeTakenFormatted" json:"timeTakenFormatted"`
 	SubmittedAt        *time.Time        `firestore:"submittedAt,omitempty" json:"submittedAt,omitempty"`
 	Cheated            bool              `firestore:"cheated" json:"cheated"`
+	ViolationCount     int               `firestore:"violationCount" json:"violationCount"`
 	UpdatedAt          time.Time         `firestore:"updatedAt" json:"updatedAt"`
 }

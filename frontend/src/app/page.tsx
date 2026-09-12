@@ -132,6 +132,11 @@ export default function Home() {
     try {
       sessionStorage.setItem("kindle_active_student_id", st.studentId);
       localStorage.setItem("kindle_active_student_id", st.studentId);
+      const backendStrikes = st.violationCount || st.strikesCount || 0;
+      if (backendStrikes > 0) {
+        localStorage.setItem(`kindle_strikes_${st.studentId}`, String(backendStrikes));
+        sessionStorage.setItem(`kindle_strikes_${st.studentId}`, String(backendStrikes));
+      }
     } catch {}
     setStudent(st);
 
@@ -142,6 +147,41 @@ export default function Home() {
         incorrectCount: st.incorrectCount || 0,
         unattemptedCount: st.unattemptedCount || 0,
       });
+      setStep("submitted");
+      return;
+    }
+
+    // Check if candidate was flagged for cheating or triggered 2 strikes
+    const strikeCount = Math.max(
+      st.violationCount || 0,
+      st.strikesCount || 0,
+      parseInt(typeof window !== "undefined" ? localStorage.getItem(`kindle_strikes_${st.studentId}`) || "0" : "0", 10)
+    );
+
+    if (st.cheated || strikeCount >= 2) {
+      try {
+        const res = await apiSubmitQuiz({
+          studentId: st.studentId,
+          answers: st.answers || {},
+          cheated: true,
+        });
+        setSubmissionDetails({
+          totalScore: res.totalScore,
+          correctCount: res.correctCount,
+          incorrectCount: res.incorrectCount,
+          unattemptedCount: res.unattemptedCount,
+        });
+      } catch (err) {
+        setSubmissionDetails({
+          totalScore: st.totalScore || 0,
+          correctCount: st.correctCount || 0,
+          incorrectCount: st.incorrectCount || 0,
+          unattemptedCount: st.unattemptedCount || 0,
+        });
+      }
+      setRecoveryNotice(
+        "Your assessment was terminated due to security policy violations (2 strikes triggered). Your answers were locked and submitted."
+      );
       setStep("submitted");
       return;
     }

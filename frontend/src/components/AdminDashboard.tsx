@@ -8,7 +8,6 @@ import {
   Trophy,
   Activity,
   CheckCircle2,
-  Download,
   ExternalLink,
 } from "lucide-react";
 import {
@@ -121,114 +120,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       setIsExporting(false);
       setTimeout(() => setExportMessage(""), 5000);
     }
-  };
-
-  // Download CSV / Excel file for submissions & leaderboard
-  const handleDownloadExcel = () => {
-    if (!leaderboard || leaderboard.length === 0) {
-      alert("No student submissions recorded yet to export.");
-      return;
-    }
-
-    const headers = [
-      "Rank",
-      "Full Name",
-      "Student ID",
-      "College Email",
-      "Course",
-      "Enrollment Number",
-      "Track",
-      "Status",
-      "Correct",
-      "Incorrect",
-      "Unattempted",
-      "Total Marks",
-      "Time Taken",
-      "Submitted At",
-      "Cheated"
-    ];
-
-    const rows = leaderboard.map((s) => [
-      s.rank,
-      `"${(s.name || "").replace(/"/g, '""')}"`,
-      `"${(s.studentId || "").replace(/"/g, '""')}"`,
-      `"${(s.collegeEmail || "").replace(/"/g, '""')}"`,
-      `"${(s.course || "").replace(/"/g, '""')}"`,
-      `"${(s.enrollmentNum || "").replace(/"/g, '""')}"`,
-      `"${(s.selectedTrack || "-").replace(/"/g, '""')}"`,
-      s.isSubmitted ? "Submitted" : "In Progress",
-      s.correctCount,
-      s.incorrectCount,
-      s.unattemptedCount,
-      s.totalScore,
-      `"${s.timeTakenFormatted || "-"}"`,
-      `"${s.registeredAt || "-"}"`,
-      s.cheated ? "Yes" : "No"
-    ]);
-
-    const tableHtml = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"/>
-      </head>
-      <body>
-        <table border="1">
-          <thead>
-            <tr style="background-color: #1e3a8a; color: #ffffff; font-weight: bold; text-align: center;">
-              ${headers.map((h) => `<th style="padding: 10px; font-family: sans-serif;">${h}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody style="font-family: sans-serif; font-size: 13px;">
-            ${leaderboard
-              .map(
-                (s) => `
-              <tr>
-                <td style="text-align: center; font-weight: bold;">${s.rank}</td>
-                <td style="font-weight: bold;">${s.name || ""}</td>
-                <td style="mso-number-format:'\\@';">${s.studentId || ""}</td>
-                <td>${s.collegeEmail || ""}</td>
-                <td>${s.course || ""}</td>
-                <td style="mso-number-format:'\\@';">${s.enrollmentNum || ""}</td>
-                <td style="text-align: center;">${s.selectedTrack || "-"}</td>
-                <td style="text-align: center; font-weight: bold; color: ${
-                  s.cheated ? "#dc2626" : s.isSubmitted ? "#16a34a" : "#d97706"
-                };">
-                  ${s.cheated ? "Submitted (Cheated)" : s.isSubmitted ? "Submitted" : "In Progress"}
-                </td>
-                <td style="text-align: center; color: #16a34a; font-weight: bold;">${s.correctCount || 0}</td>
-                <td style="text-align: center; color: #dc2626; font-weight: bold;">${s.incorrectCount || 0}</td>
-                <td style="text-align: center; color: #64748b;">${s.unattemptedCount || 0}</td>
-                <td style="text-align: right; font-weight: bold; font-size: 15px;">${s.totalScore || 0}</td>
-                <td style="text-align: center;">${s.timeTakenFormatted || "-"}</td>
-                <td>${s.registeredAt || "-"}</td>
-                <td style="text-align: center; font-weight: bold; color: ${s.cheated ? "#dc2626" : "#16a34a"};">
-                  ${s.cheated ? "YES" : "NO"}
-                </td>
-              </tr>`
-              )
-              .join("")}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([tableHtml], { type: "application/vnd.ms-excel;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `kindle_jr_5_0_leaderboard_${new Date().toISOString().slice(0, 10)}.xls`;
-    document.body.appendChild(link);
-    link.click();
-
-    setTimeout(() => {
-      try {
-        if (link.parentNode) {
-          link.parentNode.removeChild(link);
-        }
-        URL.revokeObjectURL(url);
-      } catch {}
-    }, 5000);
   };
 
   return (
@@ -346,15 +237,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                 )}
                 Sync Sheets
-              </button>
-
-              <button
-                onClick={handleDownloadExcel}
-                className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow border border-emerald-500 flex items-center gap-1.5 transition-all"
-                title="Download Excel / CSV file"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export Excel
               </button>
 
               <a
