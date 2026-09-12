@@ -24,21 +24,19 @@ func LoadTrackQuestions(dataPath, track string) ([]models.Question, error) {
 	var candidates []string
 	if normTrack == "python" {
 		candidates = []string{
-			filepath.Join(dataPath, "questions_python.json"),
 			filepath.Join(dataPath, "pythonquestions.json"),
 			"pythonquestions.json",
 			filepath.Join("..", "pythonquestions.json"),
 			filepath.Join("..", "..", "pythonquestions.json"),
-			filepath.Join("data", "questions_python.json"),
+			filepath.Join("data", "pythonquestions.json"),
 		}
 	} else {
 		candidates = []string{
-			filepath.Join(dataPath, "questions_c.json"),
 			filepath.Join(dataPath, "cquestions.json"),
 			"cquestions.json",
 			filepath.Join("..", "cquestions.json"),
 			filepath.Join("..", "..", "cquestions.json"),
-			filepath.Join("data", "questions_c.json"),
+			filepath.Join("data", "cquestions.json"),
 		}
 	}
 

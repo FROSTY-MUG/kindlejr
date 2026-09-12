@@ -1,5 +1,5 @@
-import cData from "../data/questions_c.json";
-import pythonData from "../data/questions_python.json";
+import cRaw from "../data/cquestions.json";
+import pyRaw from "../data/pythonquestions.json";
 
 export function normalizeAnswer(ans: string | undefined): string {
   if (!ans) return "";
@@ -7,7 +7,32 @@ export function normalizeAnswer(ans: string | undefined): string {
 }
 
 export function getQuestionsForTrack(track: string): any[] {
-  return track.toLowerCase() === "python" ? pythonData : cData;
+  const raw = track.toLowerCase() === "python" ? pyRaw : cRaw;
+  const list = (raw as any).questions || raw;
+  const prefix = track.toLowerCase() === "python" ? "py" : "c";
+
+  return (list as any[]).map((q: any) => {
+    let correctText = "";
+    const optionsArr: string[] = [];
+    if (q.options && typeof q.options === "object" && !Array.isArray(q.options)) {
+      for (const [key, val] of Object.entries(q.options)) {
+        optionsArr.push(String(val));
+        if (key.toUpperCase() === String(q.answer).toUpperCase()) {
+          correctText = String(val);
+        }
+      }
+    } else if (Array.isArray(q.options)) {
+      optionsArr.push(...q.options);
+    }
+
+    return {
+      id: `${prefix}_${q.id}`,
+      text: q.question || q.text,
+      options: optionsArr,
+      answer: correctText || q.answer,
+      rawLetterAnswer: q.answer,
+    };
+  });
 }
 
 export function getAnswerKey(track: string): Record<string, string> {
@@ -62,6 +87,17 @@ export function gradeAnswers(
           normUser === `${correctLetter})` ||
           normUser === `${correctLetter}.` ||
           normUser === `option ${correctLetter}`
+        ) {
+          isCorrect = true;
+        }
+      }
+      if (!isCorrect && q.rawLetterAnswer) {
+        const rawLetter = String(q.rawLetterAnswer).toLowerCase();
+        if (
+          normUser === rawLetter ||
+          normUser === `${rawLetter})` ||
+          normUser === `${rawLetter}.` ||
+          normUser === `option ${rawLetter}`
         ) {
           isCorrect = true;
         }
