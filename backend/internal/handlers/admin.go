@@ -66,6 +66,9 @@ type StudentEntry struct {
 // master admin dashboard can render its summary cards from a single request.
 func GetLeaderboard(store *db.Store) http.HandlerFunc {
 	return requireAdmin(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0")
+		w.Header().Set("Pragma", "no-cache")
+
 		students, err := store.GetAllStudents(r.Context())
 		if err != nil {
 			log.Printf("[ADMIN] Leaderboard fetch error: %v", err)

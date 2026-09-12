@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
+import useSWR from "swr";
 import {
   Users,
   BarChart2,
@@ -38,72 +39,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
   const adminSecretKey =
     process.env.NEXT_PUBLIC_ADMIN_SECRET || "kindle_jr_5_admin_secret_2026";
 
-  // Fetch telemetry & leaderboard data
-  const fetchTelemetry = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const data = await apiGetAdminLeaderboard(adminSecretKey);
-      setLeaderboard(data.students || []);
-      setTotalStudents(data.totalStudents || (data.students ? data.students.length : 0));
+  const fetcher = (url: string) =>
+    fetch(url, {
+      headers: { "X-Admin-Key": adminSecretKey, "Cache-Control": "no-cache" },
+    }).then((res) => res.json());
 
-      // Prefer the server-computed average (submitted students only).
-      if (typeof data.averageScore === "number") {
-        setAvgScore(Number(data.averageScore.toFixed(1)));
-      } else if (data.students && data.students.length > 0) {
-        const sum = data.students.reduce((acc, curr) => acc + curr.totalScore, 0);
-        setAvgScore(Number((sum / data.students.length).toFixed(1)));
-      } else {
-        setAvgScore(0);
-      }
+  const { data, error } = useSWR("/api/admin/leaderboard", fetcher, {
+    refreshInterval: 2000,
+    dedupingInterval: 1000,
+  });
 
-      setPersistenceMode(data.persistenceMode || "unknown");
-      setIsConnected(true);
-      setLastUpdated(new Date().toLocaleTimeString());
-    } catch (err) {
-      console.warn("Failed to fetch admin telemetry:", err);
-      setIsConnected(false);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [adminSecretKey]);
+  const isRefreshing = !data && !error;
+  const isConnected = !error;
 
-  // Initial fetch plus a 5-second polling loop that pauses while the tab is
-  // hidden. Polling a background tab wastes backend CPU and holds the
-  // connection pool open for no visible benefit.
-  useEffect(() => {
-    fetchTelemetry();
+  const leaderboard = data?.students || [];
+  const totalStudents = data?.totalStudents || leaderboard.length;
+  const persistenceMode = data?.persistenceMode || "unknown";
+  const lastUpdated = data ? new Date().toLocaleTimeString() : "";
 
-    let interval: NodeJS.Timeout | null = null;
-
-    const startPolling = () => {
-      if (interval) return;
-      interval = setInterval(fetchTelemetry, 5000);
-    };
-
-    const stopPolling = () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        fetchTelemetry();
-        startPolling();
-      }
-    };
-
-    startPolling();
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      stopPolling();
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [fetchTelemetry]);
+  let avgScore = 0;
+  if (typeof data?.averageScore === "number") {
+    avgScore = Number(data.averageScore.toFixed(1));
+  } else if (leaderboard.length > 0) {
+    const sum = leaderboard.reduce((acc: number, curr: any) => acc + curr.totalScore, 0);
+    avgScore = Number((sum / leaderboard.length).toFixed(1));
+  }
 
   // Sync leaderboard to Google Sheets live.
   const handleSyncSheets = async () => {

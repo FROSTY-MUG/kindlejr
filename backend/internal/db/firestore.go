@@ -396,11 +396,6 @@ func (s *Store) GetAllStudents(ctx context.Context) ([]models.StudentState, erro
 		students = append(students, student)
 	}
 
-	if len(students) == 0 {
-		if local, lerr := s.file.GetAllStudents(ctx); lerr == nil && len(local) > 0 {
-			return local, nil
-		}
-	}
 	return students, nil
 }
 
