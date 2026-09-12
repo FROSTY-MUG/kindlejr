@@ -67,7 +67,25 @@ export async function POST(req: NextRequest) {
     let students: any[] = [];
     if (db) {
       const snap = await db.collection(STUDENTS_COLLECTION).get();
-      snap.forEach((doc: any) => students.push(doc.data()));
+      const now = new Date().getTime();
+      snap.forEach((doc: any) => {
+        const data = doc.data();
+        let timeSecs = data.timeTakenSeconds || 0;
+        let timeFmt = data.timeTakenFormatted || "-";
+
+        if (!data.isSubmitted && timeSecs === 0) {
+          const start = data.startedAt ? new Date(data.startedAt).getTime() : (data.registeredAt ? new Date(data.registeredAt).getTime() : 0);
+          if (start > 0) {
+            timeSecs = Math.max(0, Math.floor((now - start) / 1000));
+            const m = Math.floor(timeSecs / 60);
+            const s = timeSecs % 60;
+            timeFmt = `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+          }
+        }
+        data.timeTakenSeconds = timeSecs;
+        data.timeTakenFormatted = timeFmt;
+        students.push(data);
+      });
     }
 
     // Sort students: Total Score DESC, then Time Taken ASC

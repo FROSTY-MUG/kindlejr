@@ -28,8 +28,24 @@ export async function GET(req: NextRequest) {
     const snapshot = await db.collection(STUDENTS_COLLECTION).get();
     const students: any[] = [];
 
+    const now = new Date().getTime();
     snapshot.forEach((doc: any) => {
-      students.push(doc.data());
+      const data = doc.data();
+      let timeSecs = data.timeTakenSeconds || 0;
+      let timeFmt = data.timeTakenFormatted || "-";
+
+      if (!data.isSubmitted && timeSecs === 0) {
+        const start = data.startedAt ? new Date(data.startedAt).getTime() : (data.registeredAt ? new Date(data.registeredAt).getTime() : 0);
+        if (start > 0) {
+          timeSecs = Math.max(0, Math.floor((now - start) / 1000));
+          const m = Math.floor(timeSecs / 60);
+          const s = timeSecs % 60;
+          timeFmt = `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+        }
+      }
+      data.timeTakenSeconds = timeSecs;
+      data.timeTakenFormatted = timeFmt;
+      students.push(data);
     });
 
     // Dual-sort: Total Score (DESC), then Time Taken (ASC - least time taken wins)
