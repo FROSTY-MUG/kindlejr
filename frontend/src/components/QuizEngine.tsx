@@ -753,7 +753,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     >
       {/* Forced Fullscreen Enforcer Overlay */}
       {!isFullscreen && violationCount < 2 && (
-        <div className="fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="bg-white border-4 border-rose-600 rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center space-y-6">
             <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border-2 border-rose-300">
               <ShieldAlert className="w-12 h-12" />
