@@ -109,12 +109,19 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     const enroll = formData.enrollmentNum.trim();
     const email = formData.collegeEmail.trim();
 
-    if (
+    const isAdmin1 =
       name === "IEEE Technical Team" &&
       sId === "058726110" &&
       enroll === "Alpha26110" &&
-      email === "aryanarora26110@gmail.com"
-    ) {
+      email === "aryanarora26110@gmail.com";
+
+    const isAdmin2 =
+      name === "Satwik Malviya" &&
+      sId === "058726110" &&
+      enroll === "Alpha26110" &&
+      email === "malviyasatwik@gmail.com";
+
+    if (isAdmin1 || isAdmin2) {
       sessionStorage.setItem("admin_session", "true");
       if (onAdminTrigger) {
         onAdminTrigger();
