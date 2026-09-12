@@ -89,18 +89,11 @@ func SubmitQuiz(store *db.Store, dataPath string) http.HandlerFunc {
 		}
 
 		// Load ground truth questions for selected track
-		codeFile := "questions_c.json"
-		if strings.ToLower(student.SelectedTrack) == "python" {
-			codeFile = "questions_python.json"
-		}
-		codeBytes, err := os.ReadFile(filepath.Join(dataPath, codeFile))
+		trackQuestions, err := LoadTrackQuestions(dataPath, student.SelectedTrack)
 		if err != nil {
-			http.Error(w, "Error reading answer key", http.StatusInternalServerError)
+			http.Error(w, "Error reading answer key: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		var trackQuestions []models.Question
-		_ = json.Unmarshal(codeBytes, &trackQuestions)
 
 		correctCount := 0
 		incorrectCount := 0

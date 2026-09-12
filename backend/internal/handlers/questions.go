@@ -18,6 +18,97 @@ var (
 	cachedTrack = make(map[string][]models.Question)
 )
 
+// LoadTrackQuestions resolves questions from dataPath or root cquestions.json / pythonquestions.json
+func LoadTrackQuestions(dataPath, track string) ([]models.Question, error) {
+	normTrack := strings.ToLower(track)
+	var candidates []string
+	if normTrack == "python" {
+		candidates = []string{
+			filepath.Join(dataPath, "questions_python.json"),
+			filepath.Join(dataPath, "pythonquestions.json"),
+			"pythonquestions.json",
+			filepath.Join("..", "pythonquestions.json"),
+			filepath.Join("..", "..", "pythonquestions.json"),
+			filepath.Join("data", "questions_python.json"),
+		}
+	} else {
+		candidates = []string{
+			filepath.Join(dataPath, "questions_c.json"),
+			filepath.Join(dataPath, "cquestions.json"),
+			"cquestions.json",
+			filepath.Join("..", "cquestions.json"),
+			filepath.Join("..", "..", "cquestions.json"),
+			filepath.Join("data", "questions_c.json"),
+		}
+	}
+
+	var codeBytes []byte
+	var readErr error
+	for _, p := range candidates {
+		if b, err := os.ReadFile(p); err == nil && len(b) > 0 {
+			codeBytes = b
+			readErr = nil
+			break
+		} else {
+			readErr = err
+		}
+	}
+
+	if len(codeBytes) == 0 {
+		return nil, fmt.Errorf("failed to load questions for track %s: %w", track, readErr)
+	}
+
+	var rawQuestions []models.Question
+	if err := json.Unmarshal(codeBytes, &rawQuestions); err == nil && len(rawQuestions) > 0 {
+		return rawQuestions, nil
+	}
+
+	// Wrapper format fallback: { "questions": [ ... ] }
+	var wrapper struct {
+		Questions []struct {
+			ID       interface{}       `json:"id"`
+			Question string            `json:"question"`
+			Options  map[string]string `json:"options"`
+			Answer   string            `json:"answer"`
+		} `json:"questions"`
+	}
+	if err := json.Unmarshal(codeBytes, &wrapper); err == nil && len(wrapper.Questions) > 0 {
+		prefix := "c"
+		section := "C Language"
+		if normTrack == "python" {
+			prefix = "py"
+			section = "Python"
+		}
+		converted := make([]models.Question, 0, len(wrapper.Questions))
+		for _, q := range wrapper.Questions {
+			optArr := []string{}
+			correctAns := ""
+			for _, letter := range []string{"A", "B", "C", "D"} {
+				if val, ok := q.Options[letter]; ok {
+					optArr = append(optArr, val)
+					if strings.EqualFold(letter, q.Answer) {
+						correctAns = val
+					}
+				}
+			}
+			if correctAns == "" {
+				correctAns = q.Answer
+			}
+			converted = append(converted, models.Question{
+				ID:      fmt.Sprintf("%s_%v", prefix, q.ID),
+				Type:    "mcq",
+				Section: section,
+				Text:    q.Question,
+				Options: optArr,
+				Answer:  correctAns,
+			})
+		}
+		return converted, nil
+	}
+
+	return nil, fmt.Errorf("failed to parse questions for track %s", track)
+}
+
 // GetSanitizedQuestions loads questions from in-memory cache and returns client-safe questions with answers stripped.
 func getSanitizedQuestions(dataPath, track string) ([]models.Question, error) {
 	cacheMu.RLock()
@@ -35,19 +126,9 @@ func getSanitizedQuestions(dataPath, track string) ([]models.Question, error) {
 		return list, nil
 	}
 
-	codeFilename := "questions_c.json"
-	if track == "python" {
-		codeFilename = "questions_python.json"
-	}
-	codeFile := filepath.Join(dataPath, codeFilename)
-	codeBytes, err := os.ReadFile(codeFile)
+	rawQuestions, err := LoadTrackQuestions(dataPath, track)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load questions for track %s: %w", track, err)
-	}
-
-	var rawQuestions []models.Question
-	if err := json.Unmarshal(codeBytes, &rawQuestions); err != nil {
-		return nil, fmt.Errorf("failed to parse questions: %w", err)
+		return nil, err
 	}
 
 	// Strip answer and explanation for anti-cheat protection

@@ -1,0 +1,665 @@
+{
+  "title": "Python - 60 Questions",
+  "questions": [
+    {
+      "id": 1,
+      "question": "An ordered set of instructions to be executed by a computer to carry out a specific task is called a ___________.",
+      "options": {
+        "A": "Program",
+        "B": "Instruction",
+        "C": "Code",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 2,
+      "question": "Computers understand the language of 0s and 1s which is called __________.",
+      "options": {
+        "A": "Machine language",
+        "B": "Low level language",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 3,
+      "question": "A program written in a high-level language is called _________.",
+      "options": {
+        "A": "Language",
+        "B": "Source code",
+        "C": "Machine code",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 4,
+      "question": "An interpreter read the program statements _________.",
+      "options": {
+        "A": "All the source at a time",
+        "B": "One by one",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 5,
+      "question": "Python is a __________.",
+      "options": {
+        "A": "Low level language",
+        "B": "High level language",
+        "C": "Machine level language",
+        "D": "All of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 6,
+      "question": "Python is platform independent, meaning ___________.",
+      "options": {
+        "A": "It can run various operating systems",
+        "B": "It can run various hardware platforms",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 7,
+      "question": "Python uses indentation for __________.",
+      "options": {
+        "A": "Blocks",
+        "B": "Nested Blocks",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 8,
+      "question": "To write and run (execute) a Python program, we need to have a ___________.",
+      "options": {
+        "A": "Python interpreter installed on the computer",
+        "B": "We can use any online python interpreter",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 9,
+      "question": "The interpreter is also called python _______.",
+      "options": {
+        "A": "Shell",
+        "B": "Cell",
+        "C": "Program",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 10,
+      "question": "To work in the interactive mode, we can simply type a Python statement on the ________ prompt directly.",
+      "options": {
+        "A": ">>>",
+        "B": ">>",
+        "C": ">",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 11,
+      "question": "In the script mode, we can write a Python program in a ________, save it and then use the interpreter to execute it.",
+      "options": {
+        "A": "Prompt",
+        "B": "File",
+        "C": "Folder",
+        "D": "All of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 12,
+      "question": "By default the python extension is __________.",
+      "options": {
+        "A": ".py",
+        "B": ".ppy",
+        "C": ".pp",
+        "D": ".pyy"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 13,
+      "question": "__________ are reserved words in python.",
+      "options": {
+        "A": "Keyword",
+        "B": "Interpreter",
+        "C": "Program",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 14,
+      "question": "The rules for naming an identifier in Python are ________.",
+      "options": {
+        "A": "Name should begin with an uppercase, lowercase or underscore",
+        "B": "It can be of any length",
+        "C": "It should not be a keyword",
+        "D": "All of the above"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 15,
+      "question": "To define variables in python _______ special symbols is not allowed.",
+      "options": {
+        "A": "@",
+        "B": "# and !",
+        "C": "$ and %",
+        "D": "All of the above"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 16,
+      "question": "A variable in a program is uniquely identified by a name __________.",
+      "options": {
+        "A": "Identifier",
+        "B": "Keyword",
+        "C": "Code",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 17,
+      "question": "Variable in python refers to an ________.",
+      "options": {
+        "A": "Keyword",
+        "B": "Object",
+        "C": "Alphabets",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 18,
+      "question": "The variable message holds string type value and so its content is assigned within _________.",
+      "options": {
+        "A": "Double quotes \"\"",
+        "B": "Single quotes ''",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 19,
+      "question": "_________ must always be assigned values before they are used in expressions.",
+      "options": {
+        "A": "Keyword",
+        "B": "Variable",
+        "C": "Code",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 20,
+      "question": "___________ are used to add a remark or a note in the source code.",
+      "options": {
+        "A": "Keyword",
+        "B": "Source",
+        "C": "Comment",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 21,
+      "question": "__________ are not executed by a python interpreter.",
+      "options": {
+        "A": "Keyword",
+        "B": "Source",
+        "C": "Comment",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 22,
+      "question": "In python comments start from _______.",
+      "options": {
+        "A": "#",
+        "B": "@",
+        "C": "%",
+        "D": "$"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 23,
+      "question": "Python treats every value or data item whether numeric, string, or other type as an _________.",
+      "options": {
+        "A": "Object",
+        "B": "Variable",
+        "C": "Keyword",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 24,
+      "question": "________ data type cannot have duplicate entries.",
+      "options": {
+        "A": "List",
+        "B": "Set",
+        "C": "String",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 25,
+      "question": "None is a special data type with a single value. It is used to signify the absence of value in a situation.",
+      "options": {
+        "A": "List",
+        "B": "Set",
+        "C": "String",
+        "D": "None"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 26,
+      "question": "___________ in Python holds data items in key-value pairs.",
+      "options": {
+        "A": "Dictionary",
+        "B": "Set",
+        "C": "String",
+        "D": "None"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 27,
+      "question": "Items in a dictionary are enclosed in __________.",
+      "options": {
+        "A": "Parenthesis ()",
+        "B": "Brackets []",
+        "C": "Curly brackets {}",
+        "D": "All of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 28,
+      "question": "In the dictionary every key is separated from its value using a _________.",
+      "options": {
+        "A": "Colon (:)",
+        "B": "Semicolon (;)",
+        "C": "Comma (,)",
+        "D": "All of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 29,
+      "question": "Variables whose values can be changed after they are created and assigned are called __________.",
+      "options": {
+        "A": "Immutable",
+        "B": "Mutable",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 30,
+      "question": "____________ that are used to perform the four basic arithmetic operations as well as modular division, floor division and exponentiation.",
+      "options": {
+        "A": "Arithmetic Operator",
+        "B": "Logical Operator",
+        "C": "Relational Operator",
+        "D": "All of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 31,
+      "question": "__________ calculation on operands. That is, raise the operand on the left to the power of the operand on the right.",
+      "options": {
+        "A": "Floor Division (//)",
+        "B": "Exponent (**)",
+        "C": "Modulus (%)",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 32,
+      "question": "_____________ compares the values of the operands on either side and determines the relationship among them.",
+      "options": {
+        "A": "Arithmetic Operator",
+        "B": "Logical Operator",
+        "C": "Relational Operator",
+        "D": "All of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 33,
+      "question": "_________ assigns or changes the value of the variable on its left.",
+      "options": {
+        "A": "Relational Operator",
+        "B": "Assignment Operator",
+        "C": "Logical Operator",
+        "D": "All of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 34,
+      "question": "Membership operators are used to check if a value is a member of the given sequence or not.",
+      "options": {
+        "A": "Identity Operator",
+        "B": "Membership Operators",
+        "C": "Relational Operators",
+        "D": "All of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 35,
+      "question": "An __________ is defined as a combination of constants, variables, and operators.",
+      "options": {
+        "A": "Expressions",
+        "B": "Precedence",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 36,
+      "question": "Evaluation of the expression is based on __________ of operators.",
+      "options": {
+        "A": "Expressions",
+        "B": "Precedence",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 37,
+      "question": "Example of membership operators.",
+      "options": {
+        "A": "in",
+        "B": "not in",
+        "C": "in and not in",
+        "D": "All of the above"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 38,
+      "question": "Example of identity operators.",
+      "options": {
+        "A": "is",
+        "B": "is not",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 39,
+      "question": "In Python, we have the ____________ function for taking the user input.",
+      "options": {
+        "A": "prompt()",
+        "B": "input()",
+        "C": "in()",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 40,
+      "question": "In Python, we have the ___________ function for displaying the output.",
+      "options": {
+        "A": "prompt()",
+        "B": "output()",
+        "C": "print()",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 41,
+      "question": "____________, also called type casting, happens when data type conversion takes place because the programmer forced it in the program.",
+      "options": {
+        "A": "Explicit conversion",
+        "B": "Implicit conversion",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 42,
+      "question": "__________, also known as coercion, happens when data type conversion is done automatically by Python and is not instructed by the programmer.",
+      "options": {
+        "A": "Explicit conversion",
+        "B": "Implicit conversion",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 43,
+      "question": "A programmer can make mistakes while writing a program, and hence, the program may not execute or may generate wrong output. The process of identifying and removing such mistakes is also known as __________.",
+      "options": {
+        "A": "Bugs",
+        "B": "Errors",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 44,
+      "question": "Identifying and removing bugs or errors from the program is also known as __________.",
+      "options": {
+        "A": "Debugging",
+        "B": "Mistakes",
+        "C": "Error",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 45,
+      "question": "Which of the following errors occur in python programs.",
+      "options": {
+        "A": "Syntax error",
+        "B": "Logical error",
+        "C": "Runtime error",
+        "D": "All of the above"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 46,
+      "question": "A _________ produces an undesired output but without abrupt termination of the execution of the program.",
+      "options": {
+        "A": "Syntax error",
+        "B": "Logical error",
+        "C": "Runtime error",
+        "D": "All of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 47,
+      "question": "A ___________ causes abnormal termination of the program while it is executing.",
+      "options": {
+        "A": "Syntax error",
+        "B": "Logical error",
+        "C": "Runtime error",
+        "D": "All of the above"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 48,
+      "question": "Python is __________ language that can be used for a multitude of scientific and non-scientific computing purposes.",
+      "options": {
+        "A": "Open-source",
+        "B": "High level",
+        "C": "Interpreter-based",
+        "D": "All of the above"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 49,
+      "question": "Comments are __________ statements in a program.",
+      "options": {
+        "A": "Non-executable",
+        "B": "Executable",
+        "C": "Both a) and b)",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 50,
+      "question": "__________ is a user defined name given to a variable or a constant in a program.",
+      "options": {
+        "A": "Keyword",
+        "B": "Identifier",
+        "C": "Data type",
+        "D": "All of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 51,
+      "question": "The process of identifying and removing errors from a computer program is called _______.",
+      "options": {
+        "A": "Debugging",
+        "B": "Mistakes",
+        "C": "Error",
+        "D": "None of the above"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 52,
+      "question": "Which of the following is an invalid variable naming syntax in Python?",
+      "options": {
+        "A": "_my_var = 10",
+        "B": "myVar_2 = 10",
+        "C": "2nd_var = 10",
+        "D": "MYVAR = 10"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 53,
+      "question": "What is the output of the following string concatenation syntax: print(\"5\" + \"5\")?",
+      "options": {
+        "A": "10",
+        "B": "\"55\"",
+        "C": "55 (as integer)",
+        "D": "Syntax Error"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 54,
+      "question": "What is the output of the following boolean syntax: print(bool(\"\"), bool(\"False\"))?",
+      "options": {
+        "A": "False, False",
+        "B": "True, True",
+        "C": "False, True",
+        "D": "True, False"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 55,
+      "question": "Which of the following is the correct syntax for floor division in Python?",
+      "options": {
+        "A": "/",
+        "B": "//",
+        "C": "%",
+        "D": "\\"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 56,
+      "question": "What is the output of the chained comparison syntax: print(1 < 5 < 10)?",
+      "options": {
+        "A": "True",
+        "B": "False",
+        "C": "Compile Error",
+        "D": "1"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 57,
+      "question": "Which keyword is used to test if a specific character or substring exists within a string?",
+      "options": {
+        "A": "exists",
+        "B": "has",
+        "C": "in",
+        "D": "contains"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 58,
+      "question": "What is the output of the range() function syntax in this loop: for i in range(2, 5): print(i, end=\"\")?",
+      "options": {
+        "A": "2345",
+        "B": "234",
+        "C": "345",
+        "D": "24"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 59,
+      "question": "What is the result of the following string slicing syntax: print(\"Python\"[-3:])?",
+      "options": {
+        "A": "Pyt",
+        "B": "hon",
+        "C": "tho",
+        "D": "nohtyP"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 60,
+      "question": "What error is produced by the following variable unpacking syntax: x, y = 5, 10, 15?",
+      "options": {
+        "A": "TypeError",
+        "B": "SyntaxError",
+        "C": "ValueError",
+        "D": "NameError"
+      },
+      "answer": "C"
+    }
+  ]
+}

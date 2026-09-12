@@ -71,24 +71,39 @@ func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 			existingState.StartedAt = &now
 		}
 
-		// 2. Real-time Partial Grading against answer key
-		answerKey := loadAnswerKey(dataPath, existingState.SelectedTrack)
+		// 2. Real-time Partial Grading against ground truth questions
+		trackQuestions := getCachedQuestions(dataPath, existingState.SelectedTrack)
 
 		correctCount := 0
 		incorrectCount := 0
 		unattemptedCount := 0
 
-		if len(answerKey) > 0 {
-			for qID, correctAns := range answerKey {
-				userAns, exists := existingState.Answers[qID]
+		if len(trackQuestions) > 0 {
+			for _, q := range trackQuestions {
+				userAns, exists := existingState.Answers[q.ID]
 				if !exists || strings.TrimSpace(userAns) == "" {
 					unattemptedCount++
 					continue
 				}
 
 				cleanUser := utils.NormalizeAnswer(userAns)
-				cleanCorrect := utils.NormalizeAnswer(correctAns)
-				if cleanUser != "" && cleanUser == cleanCorrect {
+				cleanCorrect := utils.NormalizeAnswer(q.Answer)
+				isCorrect := cleanUser != "" && cleanUser == cleanCorrect
+
+				// Fallback: check if user submitted the option letter (A, B, C, D)
+				if !isCorrect && len(q.Options) > 0 {
+					for optIdx, optVal := range q.Options {
+						if utils.NormalizeAnswer(optVal) == cleanCorrect {
+							optLetter := strings.ToLower(string(rune('a' + optIdx)))
+							if cleanUser == optLetter || cleanUser == optLetter+")" || cleanUser == optLetter+"." || cleanUser == "option "+optLetter {
+								isCorrect = true
+							}
+							break
+						}
+					}
+				}
+
+				if isCorrect {
 					correctCount++
 				} else {
 					incorrectCount++
@@ -168,7 +183,28 @@ func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 var (
 	answerKeyMu    sync.RWMutex
 	answerKeyCache = map[string]map[string]string{}
+	questionsMapMu sync.RWMutex
+	questionsCache = map[string][]models.Question{}
 )
+
+func getCachedQuestions(dataPath, track string) []models.Question {
+	cacheKey := strings.ToLower(track) + "|" + dataPath
+	questionsMapMu.RLock()
+	cached, ok := questionsCache[cacheKey]
+	questionsMapMu.RUnlock()
+	if ok {
+		return cached
+	}
+
+	qs, err := LoadTrackQuestions(dataPath, track)
+	if err == nil && len(qs) > 0 {
+		questionsMapMu.Lock()
+		questionsCache[cacheKey] = qs
+		questionsMapMu.Unlock()
+		return qs
+	}
+	return nil
+}
 
 // loadAnswerKey returns the QuestionID -> correct answer map for a track,
 // reading the JSON files only on the first call for that track.
@@ -183,19 +219,12 @@ func loadAnswerKey(dataPath, track string) map[string]string {
 
 	answerKey := map[string]string{}
 
-	codeFile := "questions_c.json"
-	if strings.ToLower(track) == "python" {
-		codeFile = "questions_python.json"
-	}
-	if codeBytes, err := os.ReadFile(filepath.Join(dataPath, codeFile)); err == nil {
-		var codingQuestions []models.Question
-		if json.Unmarshal(codeBytes, &codingQuestions) == nil {
-			for _, q := range codingQuestions {
-				answerKey[q.ID] = q.Answer
-			}
+	if codingQuestions, err := LoadTrackQuestions(dataPath, track); err == nil {
+		for _, q := range codingQuestions {
+			answerKey[q.ID] = q.Answer
 		}
 	} else {
-		log.Printf("[ANSWERKEY] Could not read coding bank %s: %v", codeFile, err)
+		log.Printf("[ANSWERKEY] Could not read coding bank for track %s: %v", track, err)
 	}
 
 	// Only cache a fully-populated key; an empty map would permanently mask a
