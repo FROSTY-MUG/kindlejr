@@ -111,6 +111,7 @@ function getLocalStudent(studentId: string): StudentData | null {
 function saveLocalStudent(student: StudentData): void {
   try {
     localStorage.setItem(`kindle_student_${student.studentId}`, JSON.stringify(student));
+    localStorage.setItem(`kindle_active_student_id`, student.studentId);
   } catch (e) {
     console.warn("LocalStorage save error:", e);
   }

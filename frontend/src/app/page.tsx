@@ -12,12 +12,13 @@ import { useOfflineSync } from "../hooks/useOfflineSync";
 import {
   apiGetQuestions,
   apiSubmitQuiz,
+  apiGetState,
   EXAM_DURATION_SECONDS,
   TOTAL_QUESTIONS,
   Question,
   StudentData,
 } from "../services/api";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 
 type FlowStep = "register" | "track" | "quiz" | "submitted" | "admin";
 
@@ -31,6 +32,7 @@ export default function Home() {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(EXAM_DURATION_SECONDS);
   const [submissionDetails, setSubmissionDetails] = useState<SubmissionResult | null>(null);
   const [recoveryNotice, setRecoveryNotice] = useState<string>("");
+  const [isRecovering, setIsRecovering] = useState<boolean>(false);
 
   const { isOnline } = useOfflineSync(student?.studentId || "");
 
@@ -46,6 +48,20 @@ export default function Home() {
         }
         if (sessionStorage.getItem("admin_session") === "true") {
           setStep("admin");
+          return;
+        }
+
+        // Auto-Recovery Implementation
+        const activeStudentId = localStorage.getItem("kindle_active_student_id");
+        if (activeStudentId && step === "register") {
+          setIsRecovering(true);
+          apiGetState(activeStudentId).then(stateRes => {
+             handleRestoreState(stateRes);
+          }).catch(err => {
+             console.warn("Auto-recovery failed or session stale:", err);
+          }).finally(() => {
+             setIsRecovering(false);
+          });
         }
       }
     } catch {}
@@ -308,11 +324,23 @@ export default function Home() {
             style={{ y: regY, scale: regScale, opacity: regOpacity }}
             className="w-full max-w-2xl bg-white/90 backdrop-blur-xl border border-slate-200 rounded-3xl p-8 sm:p-12 shadow-2xl"
           >
-            <RegistrationForm
-              onComplete={handleRegistrationComplete}
-              onRestoreState={handleRestoreState}
-              onAdminTrigger={handleAdminTrigger}
-            />
+            {isRecovering ? (
+              <div className="flex flex-col items-center justify-center py-20 text-blue-600">
+                <Loader2 className="w-12 h-12 animate-spin mb-4" />
+                <h3 className="text-xl font-bold font-mono uppercase tracking-widest text-slate-800">
+                  Recovering Session...
+                </h3>
+                <p className="text-slate-500 text-sm mt-2 font-semibold">
+                  Restoring your active Kindle Jr 5.0 assessment
+                </p>
+              </div>
+            ) : (
+              <RegistrationForm
+                onComplete={handleRegistrationComplete}
+                onRestoreState={handleRestoreState}
+                onAdminTrigger={handleAdminTrigger}
+              />
+            )}
           </motion.div>
         )}
 

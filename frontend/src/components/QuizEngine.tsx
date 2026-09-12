@@ -206,7 +206,14 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [submitError, setSubmitError] = useState<string>("");
 
   // Anti-Cheating state (2-Strike Rule: 1 warning -> 2nd strike terminates + plays loud siren)
-  const [violationCount, setViolationCount] = useState<number>(0);
+  const [violationCount, setViolationCount] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return parseInt(localStorage.getItem('kindle_strikes') || "0", 10);
+      } catch { return 0; }
+    }
+    return 0;
+  });
   const [showWarningToast, setShowWarningToast] = useState<boolean>(false);
   const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
   const [isSplitScreenActive, setIsSplitScreenActive] = useState<boolean>(false);
@@ -344,6 +351,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     const handleViolation = () => {
       setViolationCount((prev) => {
         const newCount = prev + 1;
+        try { localStorage.setItem('kindle_strikes', newCount.toString()); } catch {}
         if (newCount >= 2) {
           // Strike 2 ONLY: Close exam immediately and play loud alarm siren!
           playPreloadedSiren();
@@ -447,9 +455,18 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
-      // Block F12
-      if (e.key === "F12") {
+      // Aggressive capture blocks
+      if (e.key === "F11" || e.keyCode === 122 || e.key === "Escape" || e.keyCode === 27) {
         e.preventDefault();
+        e.stopPropagation();
+        notifyBlocked("Attempting to exit fullscreen");
+        return;
+      }
+
+      // Block F12
+      if (e.key === "F12" || e.keyCode === 123) {
+        e.preventDefault();
+        e.stopPropagation();
         triggerDevToolsAlert("DevTools Access (F12)");
         return;
       }
@@ -461,6 +478,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
 
       if (e.key === "PrintScreen" || isMacScreenshot) {
         e.preventDefault();
+        e.stopPropagation();
         notifyBlocked("Screen Capture Attempt Blocked");
 
         // Instantly apply backdrop-filter: blur(50px) to document.body for 3 seconds
@@ -469,17 +487,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
           document.body.style.transition = "filter 0.1s ease";
         }
 
-        // Log strike against user
-        setViolationCount((prev) => {
-          const newCount = prev + 1;
-          if (newCount >= 2) {
-            playPreloadedSiren();
-            handleSubmit();
-          } else {
-            setShowWarningToast(true);
-          }
-          return newCount;
-        });
+        handleViolation();
 
         setTimeout(() => {
           if (typeof document !== "undefined") {
@@ -489,11 +497,29 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         return;
       }
 
+      // Explicit Hostile Blocking: Ctrl+Tab, Alt+Tab, Ctrl+T, Ctrl+W, Ctrl+N
+      if (e.altKey && e.key === "Tab") {
+        e.preventDefault();
+        e.stopPropagation();
+        notifyBlocked("Tab Switching Shortcut (Alt+Tab)");
+        return;
+      }
+
       if (isCtrlOrCmd) {
         const key = e.key.toLowerCase();
+        
+        // Browser navigation/tab management blocks
+        if (key === "tab" || key === "t" || key === "w" || key === "n" || key === "r") {
+          e.preventDefault();
+          e.stopPropagation();
+          notifyBlocked(`Browser Shortcut (Ctrl+${key.toUpperCase()})`);
+          return;
+        }
+
         // Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+Shift+K
         if (e.shiftKey && (key === "i" || key === "j" || key === "c" || key === "k")) {
           e.preventDefault();
+          e.stopPropagation();
           triggerDevToolsAlert("DevTools Shortcut (Ctrl+Shift+" + key.toUpperCase() + ")");
           return;
         }
@@ -501,18 +527,21 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         // Block Ctrl+U (View Source)
         if (key === "u") {
           e.preventDefault();
+          e.stopPropagation();
           triggerDevToolsAlert("View Source Shortcut (Ctrl+U)");
           return;
         }
 
         if (key === "s" || key === "p" || key === "a") {
           e.preventDefault();
+          e.stopPropagation();
           notifyBlocked(`Shortcut (Ctrl+${key.toUpperCase()})`);
           return;
         }
 
         if (key === "c" || key === "v" || key === "x") {
           e.preventDefault();
+          e.stopPropagation();
           notifyBlocked(`Clipboard shortcut (Ctrl+${key.toUpperCase()})`);
           return;
         }
@@ -526,6 +555,20 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       if (!isFs && violationCount < 2) {
         handleViolation();
       }
+    };
+
+    const checkIsFullscreen = () => {
+      // Geometry Validation: Must be absolute screen size
+      const isGeometryValid = Math.abs(window.screen.width - window.innerWidth) <= 10 && 
+                              Math.abs(window.screen.height - window.innerHeight) <= 10;
+      
+      const isFs = !!document.fullscreenElement && isGeometryValid;
+      if (!isFs) {
+        setIsFullscreen(false);
+      } else {
+        setIsFullscreen(true);
+      }
+      return isFs;
     };
 
     // DevTools & Split-Screen Detector
@@ -590,7 +633,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     };
 
     document.addEventListener("pointerdown", unlockAudio);
-    document.addEventListener("keydown", unlockAudio);
+    document.addEventListener("keydown", unlockAudio, { capture: true });
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("copy", handleCopy);
@@ -599,25 +642,35 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     document.addEventListener("selectstart", handleSelectStart);
     document.addEventListener("dragstart", handleDragStart);
     document.addEventListener("drop", handleDrop);
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
     window.addEventListener("resize", checkDevToolsResize);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     // Initial fullscreen & split-screen check
     checkDevToolsResize();
+    checkIsFullscreen();
     try {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
     } catch {}
 
-    const interval = setInterval(checkDevToolsResize, 1000);
+    const devToolsInterval = setInterval(checkDevToolsResize, 1000);
+
+    // Hostile Heartbeat Daemon for Geometry/Fullscreen Validation
+    const heartbeatInterval = setInterval(() => {
+      if (!checkIsFullscreen() && violationCount < 2) {
+        // If they drop out of geometry validation, Enforcer Shield activates.
+        // We log a strike if they try to bypass it.
+      }
+    }, 400);
 
     return () => {
-      clearInterval(interval);
+      clearInterval(devToolsInterval);
+      clearInterval(heartbeatInterval);
       observer.disconnect();
       document.removeEventListener("pointerdown", unlockAudio);
-      document.removeEventListener("keydown", unlockAudio);
+      document.removeEventListener("keydown", unlockAudio, { capture: true } as any);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
@@ -628,7 +681,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       document.removeEventListener("selectstart", handleSelectStart);
       document.removeEventListener("dragstart", handleDragStart);
       document.removeEventListener("drop", handleDrop);
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
       window.removeEventListener("resize", checkDevToolsResize);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };

@@ -1,0 +1,665 @@
+{
+  "title": "C Programming Assessment",
+  "questions": [
+    {
+      "id": 1,
+      "question": "C is known as a __________ language because compiled code requires recompilation to run on a different operating system or hardware architecture.",
+      "options": {
+        "A": "Platform-independent",
+        "B": "Platform-dependent",
+        "C": "Interpreter-based",
+        "D": "None of the above"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 2,
+      "question": "To write and run a C program, the source code must first be translated into machine code by a ___________.",
+      "options": {
+        "A": "Compiler",
+        "B": "Interpreter",
+        "C": "Linker",
+        "D": "Loader"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 3,
+      "question": "The process of combining various object files and library functions into a single executable file in C is performed by the _______.",
+      "options": {
+        "A": "Preprocessor",
+        "B": "Compiler",
+        "C": "Linker",
+        "D": "Loader"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 4,
+      "question": "Before a C program is compiled, lines beginning with the # symbol (like #include) are processed by the __________.",
+      "options": {
+        "A": "Interpreter",
+        "B": "Linker",
+        "C": "Preprocessor",
+        "D": "Assembler"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 5,
+      "question": "A _________ produces an undesired output but without abrupt termination of the execution of the program.",
+      "options": {
+        "A": "Syntax error",
+        "B": "Logical error",
+        "C": "Runtime error",
+        "D": "Linker error"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 6,
+      "question": "A ___________ causes abnormal termination of the program while it is executing (for example, division by zero).",
+      "options": {
+        "A": "Syntax error",
+        "B": "Logical error",
+        "C": "Runtime error",
+        "D": "Semantic error"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 7,
+      "question": "Missing a semicolon (;) at the end of a statement in C will result in a __________.",
+      "options": {
+        "A": "Syntax error",
+        "B": "Logical error",
+        "C": "Runtime error",
+        "D": "Linker error"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 8,
+      "question": "The process of identifying and removing errors from a computer program is called _______.",
+      "options": {
+        "A": "Debugging",
+        "B": "Compiling",
+        "C": "Linking",
+        "D": "Executing"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 9,
+      "question": "Every C program must contain a _________ function, which acts as the starting point of execution.",
+      "options": {
+        "A": "start()",
+        "B": "main()",
+        "C": "execute()",
+        "D": "init()"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 10,
+      "question": "Comments in a C program (written as // or /* */) are __________.",
+      "options": {
+        "A": "Non-executable statements",
+        "B": "Executable statements",
+        "C": "Processed by the linker",
+        "D": "Converted into machine code"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 11,
+      "question": "C uses __________ to define blocks of code (such as the body of a loop, if-statement, or function).",
+      "options": {
+        "A": "Indentation",
+        "B": "Parentheses ()",
+        "C": "Curly braces {}",
+        "D": "Square brackets []"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 12,
+      "question": "__________ is a user-defined name given to a variable, function, or other entity in a program.",
+      "options": {
+        "A": "Keyword",
+        "B": "Identifier",
+        "C": "Data type",
+        "D": "Token"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 13,
+      "question": "Which of the following is NOT a valid fundamental data type in C?",
+      "options": {
+        "A": "int",
+        "B": "float",
+        "C": "char",
+        "D": "string"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 14,
+      "question": "In C, variables whose values cannot be changed after they are initialized must be declared using the __________ keyword.",
+      "options": {
+        "A": "constant",
+        "B": "immutable",
+        "C": "const",
+        "D": "static"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 15,
+      "question": "_________ in C is a data structure used to store a fixed-size sequential collection of elements of the same data type.",
+      "options": {
+        "A": "Structure",
+        "B": "Array",
+        "C": "Pointer",
+        "D": "Enum"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 16,
+      "question": "___________ in C is a user-defined data type that can hold multiple variables of different data types under a single name.",
+      "options": {
+        "A": "Array",
+        "B": "Structure",
+        "C": "Pointer",
+        "D": "Enum"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 17,
+      "question": "Which format specifier is used to print a standard decimal integer value in C?",
+      "options": {
+        "A": "%d",
+        "B": "%f",
+        "C": "%c",
+        "D": "%s"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 18,
+      "question": "What is the standard size of the char data type in C?",
+      "options": {
+        "A": "1 byte",
+        "B": "2 bytes",
+        "C": "4 bytes",
+        "D": "8 bytes"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 19,
+      "question": "Which function is used to read formatted input from the standard input (keyboard) in C?",
+      "options": {
+        "A": "printf()",
+        "B": "scanf()",
+        "C": "get()",
+        "D": "read()"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 20,
+      "question": "Which unformatted console function is used to read a single character from the standard input?",
+      "options": {
+        "A": "getchar()",
+        "B": "putchar()",
+        "C": "scanf()",
+        "D": "printf()"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 21,
+      "question": "What does the modulus operator % yield?",
+      "options": {
+        "A": "The quotient of integer division",
+        "B": "The fractional part of float division",
+        "C": "The remainder after integer division",
+        "D": "The square root of a number"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 22,
+      "question": "Which operator has the highest precedence in C?",
+      "options": {
+        "A": "||",
+        "B": "&&",
+        "C": "! (Logical NOT)",
+        "D": "=="
+      },
+      "answer": "C"
+    },
+    {
+      "id": 23,
+      "question": "What is the value of b after this code executes: int a = 0, b = 5; if (a && ++b) {}?",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "0"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 24,
+      "question": "What is the value of y after this code executes: int x = 1, y = 10; if (x || ++y) {}?",
+      "options": {
+        "A": "9",
+        "B": "10",
+        "C": "11",
+        "D": "1"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 25,
+      "question": "What does the expression 1 || 0 && 0 evaluate to in C?",
+      "options": {
+        "A": "1 (True)",
+        "B": "0 (False)",
+        "C": "Compile Error",
+        "D": "Garbage Value"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 26,
+      "question": "What is the output of the expression 5 > 4 > 3 in C?",
+      "options": {
+        "A": "1 (True)",
+        "B": "0 (False)",
+        "C": "Compile Error",
+        "D": "Runtime Error"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 27,
+      "question": "What is the exact integer output of the expression 10 + 5 * 2 % 3?",
+      "options": {
+        "A": "10",
+        "B": "11",
+        "C": "15",
+        "D": "0"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 28,
+      "question": "What does the expression !!5 evaluate to in C?",
+      "options": {
+        "A": "0",
+        "B": "1",
+        "C": "5",
+        "D": "-5"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 29,
+      "question": "Which operator is used for Logical AND?",
+      "options": {
+        "A": "&",
+        "B": "&&",
+        "C": "|",
+        "D": "||"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 30,
+      "question": "What is the output of the following code: int a = 5; if (a = 0) printf(\"Yes\"); else printf(\"No\");?",
+      "options": {
+        "A": "Yes",
+        "B": "No",
+        "C": "Compile Error",
+        "D": "Garbage Value"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 31,
+      "question": "How do you rewrite if (x > y) max = x; else max = y; using the conditional (ternary) operator?",
+      "options": {
+        "A": "max = (x > y) ? x : y;",
+        "B": "max = (x > y) : x ? y;",
+        "C": "max = (x > y) ? y : x;",
+        "D": "max = (x > y) & x : y;"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 32,
+      "question": "Which operator is used for Bitwise OR?",
+      "options": {
+        "A": "|",
+        "B": "||",
+        "C": "&",
+        "D": "^"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 33,
+      "question": "What is the value of x << 1 (Bitwise Left Shift) if x = 4?",
+      "options": {
+        "A": "2",
+        "B": "4",
+        "C": "8",
+        "D": "16"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 34,
+      "question": "What is the result of 2 & 3 (Bitwise AND) in C?",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "5"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 35,
+      "question": "The comma operator , evaluates from left to right and returns the value of the ________ operand.",
+      "options": {
+        "A": "Leftmost",
+        "B": "Rightmost",
+        "C": "Largest",
+        "D": "Smallest"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 36,
+      "question": "For a leap year calculation, which conditional expression correctly isolates century years?",
+      "options": {
+        "A": "year / 100 == 0",
+        "B": "year % 100 == 0",
+        "C": "year % 400 == 0",
+        "D": "year / 400 == 0"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 37,
+      "question": "If x < 0 and y < 0, which logical operator should combine these to confirm the point is in the Third Quadrant?",
+      "options": {
+        "A": "!",
+        "B": "^",
+        "C": "||",
+        "D": "&&"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 38,
+      "question": "In C, to which if does an else statement attach if there are no curly braces?",
+      "options": {
+        "A": "The very first if",
+        "B": "The nearest preceding if",
+        "C": "It causes a syntax error",
+        "D": "Both ifs"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 39,
+      "question": "Which data type cannot be evaluated inside a C switch statement?",
+      "options": {
+        "A": "int",
+        "B": "char",
+        "C": "float",
+        "D": "short"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 40,
+      "question": "If case 1: lacks a break; statement, what happens when the variable equals 1?",
+      "options": {
+        "A": "The program crashes",
+        "B": "It skips the rest of the switch",
+        "C": "It executes case 1 and falls through to execute the next case",
+        "D": "It loops infinitely"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 41,
+      "question": "Is the default case mandatory in a switch statement?",
+      "options": {
+        "A": "Yes, always",
+        "B": "No, it is optional",
+        "C": "Yes, but only for integers",
+        "D": "No, unless break is omitted"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 42,
+      "question": "What is the output of this code: int x = 10; if (1) { int x = 20; } printf(\"%d\", x);?",
+      "options": {
+        "A": "10",
+        "B": "20",
+        "C": "30",
+        "D": "Compile Error"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 43,
+      "question": "What happens when if (5 > 3); printf(\"Hello\"); is executed?",
+      "options": {
+        "A": "Prints Hello",
+        "B": "Syntax Error",
+        "C": "No output",
+        "D": "Infinite Loop"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 44,
+      "question": "Which conditional correctly guards against division by zero for z = x / y?",
+      "options": {
+        "A": "if (y == 0)",
+        "B": "if (y != 0)",
+        "C": "if (y > 0)",
+        "D": "if (x != 0)"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 45,
+      "question": "If an electricity bill slab applies $10 for units > 200 and $5 for units > 100, why must the > 200 condition be checked first in an if-else if ladder?",
+      "options": {
+        "A": "Syntax rules require descending order",
+        "B": "Checking > 100 first would accidentally catch values like 250",
+        "C": "The C compiler optimizes larger numbers",
+        "D": "It does not matter"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 46,
+      "question": "What are the three components of a for loop declaration separated by?",
+      "options": {
+        "A": "Commas ,",
+        "B": "Semicolons ;",
+        "C": "Colons :",
+        "D": "Spaces"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 47,
+      "question": "A do-while loop is guaranteed to execute its block of code at least how many times?",
+      "options": {
+        "A": "0",
+        "B": "1",
+        "C": "2",
+        "D": "Depends on the condition"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 48,
+      "question": "What does the break statement do inside a loop?",
+      "options": {
+        "A": "Restarts the loop",
+        "B": "Skips the current iteration",
+        "C": "Immediately terminates the loop",
+        "D": "Pauses execution"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 49,
+      "question": "What does the continue statement do inside a loop?",
+      "options": {
+        "A": "Terminates the program",
+        "B": "Terminates the loop",
+        "C": "Skips the remaining code in the current iteration and moves to the next iteration",
+        "D": "Ignores all future errors"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 50,
+      "question": "Which of the following creates an infinite loop in C?",
+      "options": {
+        "A": "for(;;)",
+        "B": "while(1)",
+        "C": "do {} while(1);",
+        "D": "All of the above"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 51,
+      "question": "Given int x = 0; while (x++ < 3) {}, what is the value of x when the loop finally terminates?",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 52,
+      "question": "What is the exact output of this code: int a = 1; printf(\"%d\", ++a);?",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "Compile Error"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 53,
+      "question": "If int i = 0; is declared inside the parentheses of a for loop in C99, can it be accessed outside the loop block?",
+      "options": {
+        "A": "Yes",
+        "B": "No",
+        "C": "Only if it's an infinite loop",
+        "D": "Yes, but only as a read-only variable"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 54,
+      "question": "What happens if you forget to increment the counter variable inside a while loop that relies on it to terminate?",
+      "options": {
+        "A": "Compile Error",
+        "B": "Syntax Error",
+        "C": "Infinite Loop",
+        "D": "Loop skips entirely"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 55,
+      "question": "In C, any non-zero integer evaluated in a loop condition is treated as what boolean concept?",
+      "options": {
+        "A": "False",
+        "B": "True",
+        "C": "Null",
+        "D": "Void"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 56,
+      "question": "What does this loop print? for(int i=1; i<=4; i++) { if(i%2==0) printf(\"%d\", i); }",
+      "options": {
+        "A": "24",
+        "B": "13",
+        "C": "1234",
+        "D": "024"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 57,
+      "question": "How many times will int i = 3; while(i > 0) { i--; } execute its body?",
+      "options": {
+        "A": "2",
+        "B": "4",
+        "C": "3",
+        "D": "0"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 58,
+      "question": "What is the final value of sum? int sum=0; for(int i=1; i<=3; i++) { sum = sum + i; }",
+      "options": {
+        "A": "6",
+        "B": "3",
+        "C": "5",
+        "D": "10"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 59,
+      "question": "Is for (int i = 0, j = 10; i < j; i++, j--) a valid C statement?",
+      "options": {
+        "A": "Yes",
+        "B": "No",
+        "C": "Only in C++",
+        "D": "Throws a syntax error"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 60,
+      "question": "What happens here: int i; for(i=0; i<3; i++); printf(\"%d\", i);?",
+      "options": {
+        "A": "Prints 012",
+        "B": "Prints 0123",
+        "C": "Prints 3",
+        "D": "Compile Error"
+      },
+      "answer": "C"
+    }
+  ]
+}
