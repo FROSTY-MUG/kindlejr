@@ -71,6 +71,18 @@ export interface AdminLeaderboardEntry {
   registeredAt?: string;
   strikesCount?: number;
   cheated?: boolean;
+
+  // Supabase compatibility fields
+  student_id?: string;
+  enrollment_no?: string;
+  email?: string;
+  track?: string;
+  total_score?: number;
+  correct_count?: number;
+  time_taken_seconds?: number;
+  started_at?: string;
+  submitted_at?: string | null;
+  answers?: Record<string, string>;
 }
 
 export async function fetchWithRetry(
@@ -422,7 +434,7 @@ export async function apiGetAdminLeaderboard(adminKey: string): Promise<{
               isSubmitted: !!st.isSubmitted,
             });
           }
-        } catch {}
+        } catch { }
       }
     }
 

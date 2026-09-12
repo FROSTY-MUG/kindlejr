@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import useSWR from "swr";
+import React, { useState, useEffect } from "react";
+
 import * as XLSX from "xlsx";
 import {
   Users,
@@ -13,11 +13,8 @@ import {
   ExternalLink,
   Download,
 } from "lucide-react";
-import {
-  apiGetAdminLeaderboard,
-  apiSyncSheets,
-  AdminLeaderboardEntry,
-} from "../services/api";
+import { apiSyncSheets, AdminLeaderboardEntry } from "../services/api";
+import { supabase } from "../lib/supabaseClient";
 
 interface AdminDashboardProps {
   onExit: () => void;
@@ -33,29 +30,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
   const adminSecretKey =
     process.env.NEXT_PUBLIC_ADMIN_SECRET || "kindle_jr_5_admin_secret_2026";
 
-  const fetcher = (url: string) =>
-    fetch(url, {
-      headers: { "X-Admin-Key": adminSecretKey, "Cache-Control": "no-cache" },
-    }).then((res) => res.json());
+  const [leaderboard, setLeaderboard] = useState<AdminLeaderboardEntry[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(true);
+  const [isConnected, setIsConnected] = useState<boolean>(true);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
 
-  const { data, error, mutate } = useSWR("/api/admin/leaderboard", fetcher, {
-    refreshInterval: 2000,
-    dedupingInterval: 1000,
-  });
+  const fetchLeaderboard = async () => {
+    setIsRefreshing(true);
+    try {
+      // Read straight from Supabase Postgres so the initial render and the
+      // realtime channel payloads share one source of truth (zero drift).
+      // Sort mirrors the backend: total_score DESC, then time_taken_seconds ASC.
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .order("total_score", { ascending: false })
+        .order("time_taken_seconds", { ascending: true });
 
-  const isRefreshing = !data && !error;
-  const isConnected = !error;
+      if (error) throw error;
+      setLeaderboard((data || []) as unknown as AdminLeaderboardEntry[]);
+      setIsConnected(true);
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch (err) {
+      console.error("Failed to fetch leaderboard:", err);
+      setIsConnected(false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
-  const leaderboard: AdminLeaderboardEntry[] = data?.students || [];
-  const totalStudents = data?.totalStudents || leaderboard.length;
-  const persistenceMode = data?.persistenceMode || "unknown";
-  const lastUpdated = data ? new Date().toLocaleTimeString() : "";
+  useEffect(() => {
+    fetchLeaderboard();
+
+    // Real-time WebSocket sync: any INSERT/UPDATE on public.students pushes the
+    // latest telemetry to every admin browser without polling.
+    const channel = supabase
+      .channel("realtime-admin")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "students" },
+        () => {
+          fetchLeaderboard();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const totalStudents = leaderboard.length;
+  const persistenceMode = "supabase-pg";
 
   let avgScore = 0;
-  if (typeof data?.averageScore === "number") {
-    avgScore = Number(data.averageScore.toFixed(1));
-  } else if (leaderboard.length > 0) {
-    const sum = leaderboard.reduce((acc: number, curr: any) => acc + curr.totalScore, 0);
+  if (leaderboard.length > 0) {
+    const sum = leaderboard.reduce((acc: number, curr: any) => acc + (curr.total_score || curr.totalScore || 0), 0);
     avgScore = Number((sum / leaderboard.length).toFixed(1));
   }
 
@@ -80,22 +110,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
   const handleDownloadExcel = () => {
     if (leaderboard.length === 0) return;
     const headers = ["Rank", "Name", "Student ID", "College Email", "Enrollment", "Course", "Track", "Strikes", "Correct", "Incorrect", "Unattempted", "Time Taken", "Score", "Cheated"];
-    const rows = leaderboard.map((s, idx) => [
-      idx + 1,
-      s.name || "Unknown",
-      s.studentId,
-      s.collegeEmail || "N/A",
-      s.enrollmentNum || "N/A",
-      s.course || "N/A",
-      s.selectedTrack || "N/A",
-      s.strikesCount || 0,
-      s.correctCount || 0,
-      s.incorrectCount || 0,
-      s.unattemptedCount || 0,
-      s.timeTakenFormatted || "-",
-      s.totalScore || 0,
-      s.cheated ? "YES" : "NO"
-    ]);
+    const rows = leaderboard.map((s, idx) => {
+      const secs = s.time_taken_seconds ?? s.timeTakenSeconds ?? 0;
+      const timeFmt = `${Math.floor(secs / 60)}m ${secs % 60}s`;
+      return [
+        idx + 1,
+        s.name || "Unknown",
+        s.student_id || s.studentId || "N/A",
+        s.email || s.collegeEmail || "N/A",
+        s.enrollment_no || s.enrollmentNum || "N/A",
+        s.course || "N/A",
+        s.track || s.selectedTrack || "N/A",
+        s.strikesCount || 0,
+        s.correct_count ?? s.correctCount ?? 0,
+        s.incorrectCount || 0,
+        s.unattemptedCount || 0,
+        timeFmt,
+        s.total_score ?? s.totalScore ?? 0,
+        s.cheated ? "YES" : "NO",
+      ];
+    });
 
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const workbook = XLSX.utils.book_new();
@@ -189,12 +223,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                 Persistence:{" "}
                 <span
                   className={
-                    persistenceMode === "firestore"
+                    persistenceMode === "supabase-pg"
                       ? "text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 ml-1"
                       : "text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 ml-1"
                   }
                 >
-                  {persistenceMode === "firestore" ? "Cloud Firestore" : persistenceMode}
+                  {persistenceMode === "supabase-pg" ? "Supabase PostgreSQL" : persistenceMode}
                 </span>
               </p>
             </div>
@@ -263,7 +297,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
               </span>
 
               <button
-                onClick={() => mutate()}
+                onClick={() => fetchLeaderboard()}
                 className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border-2 border-slate-200 transition-colors"
                 title="Refresh Leaderboard"
               >
@@ -294,27 +328,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
               </thead>
               <tbody className="divide-y-2 divide-slate-100 font-sans font-medium text-xs sm:text-sm">
                 {leaderboard.length > 0 ? (
-                  leaderboard.map((student) => {
-                    const isTop1 = student.rank === 1;
-                    const isTop2 = student.rank === 2;
-                    const isTop3 = student.rank === 3;
+                  leaderboard.map((student, rowIndex) => {
+                    const rank = student.rank ?? rowIndex + 1;
+                    const isTop1 = rank === 1;
+                    const isTop2 = rank === 2;
+                    const isTop3 = rank === 3;
                     const strikes = student.strikesCount || 0;
                     const isDisqualified = !!(student.cheated || strikes >= 2);
+                    const isSubmitted = student.isSubmitted ?? !!student.submitted_at;
 
                     return (
                       <tr
-                        key={student.studentId}
-                        className={`transition-colors hover:bg-slate-50 ${
-                          isDisqualified
-                            ? "bg-rose-50/60 border-l-4 border-l-rose-500"
-                            : isTop1
+                        key={student.student_id || student.studentId || rowIndex}
+                        className={`transition-colors hover:bg-slate-50 ${isDisqualified
+                          ? "bg-rose-50/60 border-l-4 border-l-rose-500"
+                          : isTop1
                             ? "bg-amber-50/50 border-l-4 border-l-amber-500"
                             : isTop2
-                            ? "bg-slate-100/50 border-l-4 border-l-slate-400"
-                            : isTop3
-                            ? "bg-amber-100/30 border-l-4 border-l-amber-700"
-                            : ""
-                        }`}
+                              ? "bg-slate-100/50 border-l-4 border-l-slate-400"
+                              : isTop3
+                                ? "bg-amber-100/30 border-l-4 border-l-amber-700"
+                                : ""
+                          }`}
                       >
                         {/* Rank */}
                         <td className="py-3.5 px-4 text-center font-mono font-black text-base">
@@ -331,7 +366,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                               🥉 #3
                             </span>
                           ) : (
-                            <span className="text-slate-500">#{student.rank}</span>
+                            <span className="text-slate-500">#{rank}</span>
                           )}
                         </td>
 
@@ -344,7 +379,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                                 CHEATED
                               </span>
                             )}
-                            {student.isSubmitted ? (
+                            {isSubmitted ? (
                               <span className="text-[10px] uppercase font-black px-1.5 py-0.5 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded">
                                 Submitted
                               </span>
@@ -358,32 +393,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
 
                         {/* Student ID */}
                         <td className="py-3.5 px-4 font-mono text-blue-600 font-bold">
-                          {student.studentId}
+                          {student.student_id || student.studentId}
                         </td>
 
                         {/* College Email */}
                         <td className="py-3.5 px-4 font-mono text-xs text-slate-600">
-                          {student.collegeEmail || "-"}
+                          {student.email || student.collegeEmail || "-"}
                         </td>
 
                         {/* Enrollment Number */}
                         <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700">
-                          {student.enrollmentNum || "-"}
+                          {student.enrollment_no || student.enrollmentNum || "-"}
                         </td>
 
                         {/* Course */}
-                        <td className="py-3.5 px-4 text-xs text-slate-600 font-semibold">{student.course}</td>
+                        <td className="py-3.5 px-4 text-xs text-slate-600 font-semibold">{student.course || "B.Tech CSE"}</td>
 
                         {/* Track */}
                         <td className="py-3.5 px-3 text-center font-bold text-xs">
                           <span className="px-2 py-0.5 bg-slate-100 text-slate-800 rounded border border-slate-200">
-                            {student.selectedTrack || "-"}
+                            {student.track || student.selectedTrack || "-"}
                           </span>
                         </td>
 
                         {/* Strikes */}
                         <td className="py-3.5 px-3 text-center">
-                          {isDisqualified ? (
+                          {student.cheated || isDisqualified ? (
                             <span className="px-2 py-0.5 bg-rose-100 text-rose-700 font-bold text-xs rounded border border-rose-300" title="Disqualified on Strike 2">
                               ⛔ 2 (Cheated)
                             </span>
@@ -400,27 +435,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
 
                         {/* Correct Count */}
                         <td className="py-3.5 px-3 text-center font-mono font-black text-emerald-600">
-                          {student.correctCount}
+                          {student.correct_count ?? student.correctCount}
                         </td>
 
                         {/* Incorrect Count */}
                         <td className="py-3.5 px-3 text-center font-mono font-black text-rose-600">
-                          {student.incorrectCount}
+                          {student.incorrectCount ?? "-"}
                         </td>
 
                         {/* Unattempted Count */}
                         <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-400">
-                          {student.unattemptedCount}
+                          {student.unattemptedCount ?? "-"}
                         </td>
 
                         {/* Time Taken */}
                         <td className="py-3.5 px-4 text-center font-mono text-xs text-blue-600 font-bold">
-                          {student.timeTakenFormatted || "-"}
+                          {(() => {
+                            const secs = student.time_taken_seconds ?? student.timeTakenSeconds;
+                            if (secs !== undefined && secs !== null && secs > 0) {
+                              return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+                            }
+                            if (student.started_at) {
+                              const elapsed = Math.max(0, Math.floor((Date.now() - new Date(student.started_at).getTime()) / 1000));
+                              return `${Math.floor(elapsed / 60)}m ${elapsed % 60}s (Live)`;
+                            }
+                            return "-";
+                          })()}
                         </td>
 
                         {/* Total Score / Marks */}
                         <td className="py-3.5 px-4 text-right font-mono text-lg font-black text-slate-900">
-                          {student.totalScore}
+                          {student.total_score ?? student.totalScore}
                         </td>
                       </tr>
                     );
