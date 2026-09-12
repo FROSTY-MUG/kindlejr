@@ -188,6 +188,23 @@ export function playPreloadedSiren() {
   playSecuritySiren();
 }
 
+export function checkIsFullscreen(): boolean {
+  if (typeof window === "undefined") return true;
+  const doc = document as any;
+  const isDocFullscreen = Boolean(
+    doc.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement ||
+      doc.msFullscreenElement
+  );
+  if (isDocFullscreen) return true;
+  // Fallback: exact viewport geometry matching full screen dimensions
+  const isGeometryFullscreen =
+    Math.abs(window.screen.width - window.innerWidth) <= 10 &&
+    Math.abs(window.screen.height - window.innerHeight) <= 10;
+  return isGeometryFullscreen;
+}
+
 export const QuizEngine: React.FC<QuizEngineProps> = ({
   student,
   questions,
@@ -205,20 +222,31 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>("");
 
-  // Anti-Cheating state (2-Strike Rule: 1 warning -> 2nd strike terminates + plays loud siren)
+  // Anti-Cheating state (2-Strike Rule with durable localStorage & Firestore persistence)
   const [violationCount, setViolationCount] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        return parseInt(localStorage.getItem('kindle_strikes') || "0", 10);
-      } catch { return 0; }
+    let strikes = 0;
+    try {
+      if (typeof window !== "undefined") {
+        const local = localStorage.getItem(`kindle_strikes_${student.studentId}`);
+        if (local) strikes = Math.max(strikes, parseInt(local, 10) || 0);
+        const sess = sessionStorage.getItem(`kindle_strikes_${student.studentId}`);
+        if (sess) strikes = Math.max(strikes, parseInt(sess, 10) || 0);
+      }
+    } catch {}
+    if (typeof student.violationCount === "number") {
+      strikes = Math.max(strikes, student.violationCount);
     }
-    return 0;
+    if (typeof student.strikesCount === "number") {
+      strikes = Math.max(strikes, student.strikesCount);
+    }
+    return strikes;
   });
   const [showWarningToast, setShowWarningToast] = useState<boolean>(false);
   const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
   const [isSplitScreenActive, setIsSplitScreenActive] = useState<boolean>(false);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(true);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(() => checkIsFullscreen());
   const [blockedActionNotice, setBlockedActionNotice] = useState<string>("");
+  const isExamStartedRef = useRef<boolean>(checkIsFullscreen());
 
   const { isOnline, queueOfflineAnswer } = useOfflineSync(student.studentId);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -308,71 +336,110 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     }, 350);
   };
 
-  // Submit Final Answers
-  const handleSubmit = useCallback(async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+  const violationCountRef = useRef<number>(violationCount);
+  const lastViolationTimeRef = useRef<number>(0);
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-    const pending = pendingSaveRef.current;
-    pendingSaveRef.current = null;
-    if (pending) {
-      await persistAnswer(pending.questionId, pending.answer, pending.idx);
-    }
-
-    try {
-      const res = await apiSubmitQuiz({
-        studentId: student.studentId,
-        answers: answers,
-      });
-      onSubmitted({
-        totalScore: res.totalScore,
-        correctCount: res.correctCount,
-        incorrectCount: res.incorrectCount,
-        unattemptedCount: res.unattemptedCount,
-        strikesCount: violationCount,
-        cheated: violationCount >= 2,
-      });
-    } catch (err) {
-      console.error("Submission failed:", err);
-      setSubmitError(
-        "We could not submit your attempt. Please check your connection and try again."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [isSubmitting, student.studentId, answers, violationCount, onSubmitted]);
-
-  // Anti-Cheating Event Listeners (Tab Switching & Focus Loss - Strict 2-Strike Rule)
   useEffect(() => {
-    const handleViolation = () => {
-      setViolationCount((prev) => {
-        const newCount = prev + 1;
-        try { localStorage.setItem('kindle_strikes', newCount.toString()); } catch {}
-        if (newCount >= 2) {
-          // Strike 2 ONLY: Close exam immediately and play loud alarm siren!
-          playPreloadedSiren();
-          handleSubmit();
-        } else {
-          // Strike 1: Show 1st & only warning modal
-          setShowWarningToast(true);
-        }
-        return newCount;
+    violationCountRef.current = violationCount;
+  }, [violationCount]);
+
+  // Submit Final Answers
+  const handleSubmit = useCallback(
+    async (forceCheated = false) => {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      const pending = pendingSaveRef.current;
+      pendingSaveRef.current = null;
+      if (pending) {
+        await persistAnswer(pending.questionId, pending.answer, pending.idx);
+      }
+
+      const isCheated = forceCheated || violationCountRef.current >= 2 || Boolean(student.cheated);
+
+      try {
+        const res = await apiSubmitQuiz({
+          studentId: student.studentId,
+          answers: answers,
+          cheated: isCheated,
+        });
+        onSubmitted({
+          totalScore: res.totalScore,
+          correctCount: res.correctCount,
+          incorrectCount: res.incorrectCount,
+          unattemptedCount: res.unattemptedCount,
+          strikesCount: Math.max(violationCountRef.current, isCheated ? 2 : 0),
+          cheated: isCheated,
+        });
+      } catch (err) {
+        console.error("Submission failed:", err);
+        setSubmitError(
+          "We could not submit your attempt. Please check your connection and try again."
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [isSubmitting, student.studentId, student.cheated, answers, onSubmitted]
+  );
+
+  // If student already has 2 strikes or cheated flag on mount, immediately terminate assessment
+  useEffect(() => {
+    if (violationCount >= 2 || student.cheated) {
+      playPreloadedSiren();
+      handleSubmit(true);
+    }
+  }, []);
+
+  // Anti-Cheating Event Listeners (Tab Switching, Focus Loss, F11, & Full-Screen Tampering)
+  useEffect(() => {
+    const handleViolation = (reason = "Violation") => {
+      const now = Date.now();
+      if (now - lastViolationTimeRef.current < 350) {
+        return;
+      }
+      lastViolationTimeRef.current = now;
+
+      violationCountRef.current += 1;
+      const newCount = violationCountRef.current;
+      try {
+        localStorage.setItem(`kindle_strikes_${student.studentId}`, String(newCount));
+        sessionStorage.setItem(`kindle_strikes_${student.studentId}`, String(newCount));
+      } catch {}
+      setViolationCount(newCount);
+
+      // Instantly push strike count to backend API so it is locked immutably in Firestore
+      apiAutoSaveAnswer({
+        studentId: student.studentId,
+        currentQuestion: currentIndex,
+        violationCount: newCount,
+      }).catch((err) => {
+        console.warn("[QUIZ] Failed to push violation count to backend:", err);
       });
+
+      if (newCount >= 2) {
+        // Strike 2 ONLY: Close exam immediately and play loud alarm siren!
+        playPreloadedSiren();
+        handleSubmit(true);
+      } else {
+        // Strike 1: Show 1st & only warning modal
+        setShowWarningToast(true);
+      }
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden && violationCount < 2) {
-        handleViolation();
+      if (document.hidden && violationCountRef.current < 2) {
+        handleViolation("Tab Switched");
       }
     };
 
     const handleBlur = () => {
-      if (violationCount < 2) {
-        handleViolation();
+      if (violationCountRef.current < 2) {
+        handleViolation("Window Lost Focus");
       }
     };
 
@@ -453,22 +520,29 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-
-      // Aggressive capture blocks
-      if (e.key === "F11" || e.keyCode === 122 || e.key === "Escape" || e.keyCode === 27) {
+      // 1. Intercept F11 & Escape: completely blocks native browser full-screen toggling
+      if (e.key === "F11" || e.keyCode === 122) {
         e.preventDefault();
         e.stopPropagation();
-        notifyBlocked("Attempting to exit fullscreen");
-        return;
+        handleViolation("F11 Key Press (Full-Screen Exit Attempt)");
+        return false;
       }
+
+      if (e.key === "Escape" || e.keyCode === 27) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("Escape Key Press (Full-Screen Exit Attempt)");
+        return false;
+      }
+
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
       // Block F12
       if (e.key === "F12" || e.keyCode === 123) {
         e.preventDefault();
         e.stopPropagation();
         triggerDevToolsAlert("DevTools Access (F12)");
-        return;
+        return false;
       }
 
       // Screenshot Prevention: Windows PrintScreen and Mac Meta+Shift+3 / Meta+Shift+4
@@ -481,20 +555,19 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         e.stopPropagation();
         notifyBlocked("Screen Capture Attempt Blocked");
 
-        // Instantly apply backdrop-filter: blur(50px) to document.body for 3 seconds
         if (typeof document !== "undefined") {
           document.body.style.filter = "blur(50px)";
           document.body.style.transition = "filter 0.1s ease";
         }
 
-        handleViolation();
+        handleViolation("Screen Capture Attempt");
 
         setTimeout(() => {
           if (typeof document !== "undefined") {
             document.body.style.filter = "";
           }
         }, 3000);
-        return;
+        return false;
       }
 
       // Explicit Hostile Blocking: Ctrl+Tab, Alt+Tab, Ctrl+T, Ctrl+W, Ctrl+N
@@ -507,13 +580,13 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
 
       if (isCtrlOrCmd) {
         const key = e.key.toLowerCase();
-        
-        // Browser navigation/tab management blocks
-        if (key === "tab" || key === "t" || key === "w" || key === "n" || key === "r") {
+
+        // Block tab-switching shortcuts (Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+T, Ctrl+N, Ctrl+W, Ctrl+R)
+        if (e.key === "Tab" || key === "t" || key === "n" || key === "w" || key === "r") {
           e.preventDefault();
           e.stopPropagation();
-          notifyBlocked(`Browser Shortcut (Ctrl+${key.toUpperCase()})`);
-          return;
+          handleViolation(`Tab Shortcut Blocked (Ctrl+${e.key.toUpperCase()})`);
+          return false;
         }
 
         // Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+Shift+K
@@ -521,7 +594,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
           e.preventDefault();
           e.stopPropagation();
           triggerDevToolsAlert("DevTools Shortcut (Ctrl+Shift+" + key.toUpperCase() + ")");
-          return;
+          return false;
         }
 
         // Block Ctrl+U (View Source)
@@ -529,31 +602,39 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
           e.preventDefault();
           e.stopPropagation();
           triggerDevToolsAlert("View Source Shortcut (Ctrl+U)");
-          return;
+          return false;
         }
 
         if (key === "s" || key === "p" || key === "a") {
           e.preventDefault();
           e.stopPropagation();
           notifyBlocked(`Shortcut (Ctrl+${key.toUpperCase()})`);
-          return;
+          return false;
         }
 
         if (key === "c" || key === "v" || key === "x") {
           e.preventDefault();
           e.stopPropagation();
           notifyBlocked(`Clipboard shortcut (Ctrl+${key.toUpperCase()})`);
-          return;
+          return false;
         }
+      }
+
+      // Block Alt navigation shortcuts
+      if (e.altKey && (e.key === "Tab" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("Alt Navigation Attempt");
+        return false;
       }
     };
 
-    // Fullscreen and Split-Screen Monitoring
-    const handleFullscreenChange = () => {
-      const isFs = !!document.fullscreenElement;
+    // Fullscreen and Geometry Monitoring
+    const verifyFullscreen = () => {
+      const isFs = checkIsFullscreen();
       setIsFullscreen(isFs);
-      if (!isFs && violationCount < 2) {
-        handleViolation();
+      if (!isFs && isExamStartedRef.current) {
+        handleViolation("Exited Full-Screen Mode");
       }
     };
 
@@ -633,8 +714,16 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     };
 
     document.addEventListener("pointerdown", unlockAudio);
-    document.addEventListener("keydown", unlockAudio, { capture: true });
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("keydown", unlockAudio);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("fullscreenchange", verifyFullscreen);
+    (document as any).addEventListener?.("webkitfullscreenchange", verifyFullscreen);
+    (document as any).addEventListener?.("mozfullscreenchange", verifyFullscreen);
+    (document as any).addEventListener?.("MSFullscreenChange", verifyFullscreen);
+    window.addEventListener("resize", verifyFullscreen);
+    window.addEventListener("resize", checkDevToolsResize);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("copy", handleCopy);
     document.addEventListener("cut", handleCut);
@@ -642,38 +731,32 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     document.addEventListener("selectstart", handleSelectStart);
     document.addEventListener("dragstart", handleDragStart);
     document.addEventListener("drop", handleDrop);
-    window.addEventListener("keydown", handleKeyDown, { capture: true });
-    window.addEventListener("resize", checkDevToolsResize);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     // Initial fullscreen & split-screen check
+    verifyFullscreen();
     checkDevToolsResize();
-    checkIsFullscreen();
-    try {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    } catch {}
 
-    const devToolsInterval = setInterval(checkDevToolsResize, 1000);
-
-    // Hostile Heartbeat Daemon for Geometry/Fullscreen Validation
+    // 400ms Heartbeat: continuously checks geometry and catches F11 or silent un-fullscreening
     const heartbeatInterval = setInterval(() => {
-      if (!checkIsFullscreen() && violationCount < 2) {
-        // If they drop out of geometry validation, Enforcer Shield activates.
-        // We log a strike if they try to bypass it.
-      }
+      verifyFullscreen();
+      checkDevToolsResize();
     }, 400);
 
     return () => {
-      clearInterval(devToolsInterval);
       clearInterval(heartbeatInterval);
       observer.disconnect();
       document.removeEventListener("pointerdown", unlockAudio);
-      document.removeEventListener("keydown", unlockAudio, { capture: true } as any);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("keydown", unlockAudio);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("fullscreenchange", verifyFullscreen);
+      (document as any).removeEventListener?.("webkitfullscreenchange", verifyFullscreen);
+      (document as any).removeEventListener?.("mozfullscreenchange", verifyFullscreen);
+      (document as any).removeEventListener?.("MSFullscreenChange", verifyFullscreen);
+      window.removeEventListener("resize", verifyFullscreen);
+      window.removeEventListener("resize", checkDevToolsResize);
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("copy", handleCopy);
       document.removeEventListener("cut", handleCut);
@@ -681,17 +764,24 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       document.removeEventListener("selectstart", handleSelectStart);
       document.removeEventListener("dragstart", handleDragStart);
       document.removeEventListener("drop", handleDrop);
-      window.removeEventListener("keydown", handleKeyDown, { capture: true });
-      window.removeEventListener("resize", checkDevToolsResize);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [violationCount, handleSubmit]);
+  }, [currentIndex, student.studentId, handleSubmit]);
 
   const requestEnterFullscreen = () => {
     try {
-      document.documentElement.requestFullscreen().then(() => {
-        setIsFullscreen(true);
-      }).catch(() => {});
+      const elem = document.documentElement as any;
+      const rfs =
+        elem.requestFullscreen ||
+        elem.webkitRequestFullscreen ||
+        elem.mozRequestFullScreen ||
+        elem.msRequestFullscreen;
+      if (rfs) {
+        rfs.call(elem).then(() => {
+          setIsFullscreen(true);
+          isExamStartedRef.current = true;
+        }).catch(() => {});
+      }
     } catch {}
   };
 
@@ -752,7 +842,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       data-enable-grammarly="false"
     >
       {/* Forced Fullscreen Enforcer Overlay */}
-      {!isFullscreen && violationCount < 2 && (
+      {!isFullscreen && (
         <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="bg-white border-4 border-rose-600 rounded-3xl p-8 sm:p-12 max-w-lg w-full shadow-2xl text-center space-y-6">
             <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border-2 border-rose-300">
@@ -886,7 +976,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
           </div>
 
           <div className="flex items-center space-x-4">
-            <Timer initialSeconds={remainingSeconds} onExpire={handleSubmit} />
+            <Timer initialSeconds={remainingSeconds} onExpire={() => handleSubmit(false)} />
             <button
               onClick={() => setShowConfirmModal(true)}
               className="py-3 px-6 rounded-xl font-black text-sm text-white bg-pink-500 hover:bg-pink-600 shadow-lg shadow-pink-500/20 transition-all flex items-center gap-2 border-2 border-transparent"
@@ -1005,7 +1095,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
                 Continue Test
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={() => handleSubmit(false)}
                 disabled={isSubmitting}
                 className="py-2.5 px-5 rounded-xl text-sm font-bold bg-pink-500 hover:bg-pink-600 text-white shadow-lg shadow-pink-500/20 flex items-center gap-2 border-2 border-transparent"
               >

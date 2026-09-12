@@ -11,8 +11,8 @@ import { AdminDashboard } from "../components/AdminDashboard";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import {
   apiGetQuestions,
-  apiSubmitQuiz,
   apiGetState,
+  apiSubmitQuiz,
   EXAM_DURATION_SECONDS,
   TOTAL_QUESTIONS,
   Question,
@@ -51,17 +51,25 @@ export default function Home() {
           return;
         }
 
-        // Auto-Recovery Implementation
-        const activeStudentId = localStorage.getItem("kindle_active_student_id");
-        if (activeStudentId && step === "register") {
+        // Auto-restore active student session on page refresh or recovery
+        const savedStudentId =
+          sessionStorage.getItem("kindle_active_student_id") ||
+          localStorage.getItem("kindle_active_student_id");
+
+        if (savedStudentId && step === "register") {
           setIsRecovering(true);
-          apiGetState(activeStudentId).then(stateRes => {
-             handleRestoreState(stateRes);
-          }).catch(err => {
-             console.warn("Auto-recovery failed or session stale:", err);
-          }).finally(() => {
-             setIsRecovering(false);
-          });
+          apiGetState(savedStudentId)
+            .then((stateRes: any) => {
+              if (stateRes && stateRes.student) {
+                handleRestoreState(stateRes);
+              }
+            })
+            .catch((err: any) => {
+              console.warn("Auto-recovery failed or session stale:", err);
+            })
+            .finally(() => {
+              setIsRecovering(false);
+            });
         }
       }
     } catch {}
@@ -81,6 +89,10 @@ export default function Home() {
 
   // Registration Completed
   const handleRegistrationComplete = (registeredStudent: StudentData) => {
+    try {
+      sessionStorage.setItem("kindle_active_student_id", registeredStudent.studentId);
+      localStorage.setItem("kindle_active_student_id", registeredStudent.studentId);
+    } catch {}
     setStudent(registeredStudent);
     setStep("track");
   };
@@ -97,6 +109,10 @@ export default function Home() {
     shuffled: number[]
   ) => {
     if (!student) return;
+    try {
+      sessionStorage.setItem("kindle_active_student_id", student.studentId);
+      localStorage.setItem("kindle_active_student_id", student.studentId);
+    } catch {}
     setStudent((prev) => (prev ? { ...prev, selectedTrack: track } : null));
     setQuestions(fetchedQuestions);
     setShuffledOrder(shuffled);
@@ -114,6 +130,15 @@ export default function Home() {
     shouldAutoSubmit?: boolean;
   }) => {
     const st = stateRes.student;
+    try {
+      sessionStorage.setItem("kindle_active_student_id", st.studentId);
+      localStorage.setItem("kindle_active_student_id", st.studentId);
+      const backendStrikes = st.violationCount || st.strikesCount || 0;
+      if (backendStrikes > 0) {
+        localStorage.setItem(`kindle_strikes_${st.studentId}`, String(backendStrikes));
+        sessionStorage.setItem(`kindle_strikes_${st.studentId}`, String(backendStrikes));
+      }
+    } catch {}
     setStudent(st);
 
     if (st.isSubmitted) {
@@ -123,6 +148,41 @@ export default function Home() {
         incorrectCount: st.incorrectCount || 0,
         unattemptedCount: st.unattemptedCount || 0,
       });
+      setStep("submitted");
+      return;
+    }
+
+    // Check if candidate was flagged for cheating or triggered 2 strikes
+    const strikeCount = Math.max(
+      st.violationCount || 0,
+      st.strikesCount || 0,
+      parseInt(typeof window !== "undefined" ? localStorage.getItem(`kindle_strikes_${st.studentId}`) || "0" : "0", 10)
+    );
+
+    if (st.cheated || strikeCount >= 2) {
+      try {
+        const res = await apiSubmitQuiz({
+          studentId: st.studentId,
+          answers: st.answers || {},
+          cheated: true,
+        });
+        setSubmissionDetails({
+          totalScore: res.totalScore,
+          correctCount: res.correctCount,
+          incorrectCount: res.incorrectCount,
+          unattemptedCount: res.unattemptedCount,
+        });
+      } catch (err) {
+        setSubmissionDetails({
+          totalScore: st.totalScore || 0,
+          correctCount: st.correctCount || 0,
+          incorrectCount: st.incorrectCount || 0,
+          unattemptedCount: st.unattemptedCount || 0,
+        });
+      }
+      setRecoveryNotice(
+        "Your assessment was terminated due to security policy violations (2 strikes triggered). Your answers were locked and submitted."
+      );
       setStep("submitted");
       return;
     }

@@ -8,7 +8,6 @@ import {
   Trophy,
   Activity,
   CheckCircle2,
-  Download,
   ExternalLink,
 } from "lucide-react";
 import {
@@ -123,8 +122,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
     }
   };
 
-
-
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-900 font-sans selection:bg-blue-200 selection:text-blue-900 pt-20 pb-16">
       {/* Fixed Top Bar Header */}
@@ -235,8 +232,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                 )}
                 Sync Sheets
               </button>
-
-
 
               <a
                 href="https://1drv.ms/x/c/14bf62685276b99c/IQBuDIUkJ4NRRLrqEbM4yFKjAQ0hKpdxsOMIBA1IgoQ8Lwk?e=biLM3s"

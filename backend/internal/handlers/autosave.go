@@ -23,6 +23,7 @@ type AutoSavePayload struct {
 	Answer          string `json:"answer"`
 	CurrentQuestion int    `json:"currentQuestion"`
 	StartTimerNow   bool   `json:"startTimerNow"`
+	ViolationCount  *int   `json:"violationCount,omitempty"`
 }
 
 // RealTimeAutoSaveAnswer handles debounced answer selection, performs real-time
@@ -102,6 +103,15 @@ func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 		existingState.IncorrectCount = incorrectCount
 		existingState.UnattemptedCount = unattemptedCount
 
+		if payload.ViolationCount != nil {
+			if *payload.ViolationCount > existingState.ViolationCount {
+				existingState.ViolationCount = *payload.ViolationCount
+			}
+			if existingState.ViolationCount >= 2 {
+				existingState.Cheated = true
+			}
+		}
+
 		// 3. Persist updated score & answers to Firestore
 		updates := map[string]interface{}{
 			"currentQuestion":  payload.CurrentQuestion,
@@ -110,6 +120,13 @@ func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 			"correctCount":     correctCount,
 			"incorrectCount":   incorrectCount,
 			"unattemptedCount": unattemptedCount,
+		}
+
+		if payload.ViolationCount != nil || existingState.ViolationCount > 0 {
+			updates["violationCount"] = existingState.ViolationCount
+			if existingState.ViolationCount >= 2 {
+				updates["cheated"] = true
+			}
 		}
 
 		if payload.QuestionID != "" {

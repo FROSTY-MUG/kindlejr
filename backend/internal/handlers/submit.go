@@ -20,6 +20,7 @@ import (
 type SubmitPayload struct {
 	StudentID string            `json:"studentId"`
 	Answers   map[string]string `json:"answers,omitempty"`
+	Cheated   *bool             `json:"cheated,omitempty"`
 }
 
 type SubmitResponse struct {
@@ -164,6 +165,10 @@ func SubmitQuiz(store *db.Store, dataPath string) http.HandlerFunc {
 		student.TimeTakenFormatted = timeTakenFormatted
 		student.SubmittedAt = &now
 
+		if payload.Cheated != nil && *payload.Cheated {
+			student.Cheated = true
+		}
+
 		updates := map[string]interface{}{
 			"answers":            student.Answers,
 			"isSubmitted":        true,
@@ -174,6 +179,10 @@ func SubmitQuiz(store *db.Store, dataPath string) http.HandlerFunc {
 			"timeTakenSeconds":   timeTakenSeconds,
 			"timeTakenFormatted": timeTakenFormatted,
 			"submittedAt":        &now,
+		}
+
+		if student.Cheated {
+			updates["cheated"] = true
 		}
 
 		if err := store.UpsertStudentMap(ctx, student.StudentID, updates); err != nil {
