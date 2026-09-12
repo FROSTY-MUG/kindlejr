@@ -127,14 +127,36 @@ func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 			}
 		}
 
+		// Live Time Calculation
+		now := time.Now()
+		timeTakenSeconds := 0
+		timeTakenFormatted := "-"
+
+		if existingState.StartedAt != nil {
+			timeTakenSeconds = int(now.Sub(*existingState.StartedAt).Seconds())
+		} else if existingState.RegisteredAt != nil {
+			timeTakenSeconds = int(now.Sub(*existingState.RegisteredAt).Seconds())
+		}
+
+		if timeTakenSeconds > 0 {
+			mins := timeTakenSeconds / 60
+			secs := timeTakenSeconds % 60
+			timeTakenFormatted = fmt.Sprintf("%02dm %02ds", mins, secs)
+		}
+
+		existingState.TimeTakenSeconds = timeTakenSeconds
+		existingState.TimeTakenFormatted = timeTakenFormatted
+
 		// 3. Persist updated score & answers to Firestore
 		updates := map[string]interface{}{
-			"currentQuestion":  payload.CurrentQuestion,
-			"answers":          existingState.Answers,
-			"totalScore":       totalScore,
-			"correctCount":     correctCount,
-			"incorrectCount":   incorrectCount,
-			"unattemptedCount": unattemptedCount,
+			"currentQuestion":    payload.CurrentQuestion,
+			"answers":            existingState.Answers,
+			"totalScore":         totalScore,
+			"correctCount":       correctCount,
+			"incorrectCount":     incorrectCount,
+			"unattemptedCount":   unattemptedCount,
+			"timeTakenSeconds":   timeTakenSeconds,
+			"timeTakenFormatted": timeTakenFormatted,
 		}
 
 		if payload.ViolationCount != nil || existingState.ViolationCount > 0 {

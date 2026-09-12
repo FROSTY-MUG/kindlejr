@@ -9,6 +9,7 @@ import {
   Activity,
   CheckCircle2,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import {
   apiGetAdminLeaderboard,
@@ -122,6 +123,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
     }
   };
 
+  const handleDownloadCSV = () => {
+    if (leaderboard.length === 0) return;
+    const headers = ["Rank", "Name", "Student ID", "College Email", "Enrollment", "Course", "Track", "Strikes", "Correct", "Incorrect", "Unattempted", "Time Taken", "Score", "Cheated"];
+    const rows = leaderboard.map((s, idx) => [
+      idx + 1,
+      s.name || "Unknown",
+      s.studentId,
+      s.collegeEmail || "N/A",
+      s.enrollmentNum || "N/A",
+      s.courseSelection === "Other" ? s.customCourse || "Other" : s.courseSelection || "N/A",
+      s.track || "N/A",
+      s.strikesCount || 0,
+      s.correctCount || 0,
+      s.incorrectCount || 0,
+      s.unattemptedCount || 0,
+      s.timeTakenFormatted || "-",
+      s.totalScore || 0,
+      s.cheated ? "YES" : "NO"
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map(e => e.map(String).map(v => `"${v.replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `KindleJr_Leaderboard_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-900 font-sans selection:bg-blue-200 selection:text-blue-900 pt-20 pb-16">
       {/* Fixed Top Bar Header */}
@@ -231,6 +264,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                 )}
                 Sync Sheets
+              </button>
+
+              <button
+                onClick={handleDownloadCSV}
+                className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow border border-emerald-500 flex items-center gap-1.5 transition-all"
+                title="Download Leaderboard as CSV"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
               </button>
 
               <a
