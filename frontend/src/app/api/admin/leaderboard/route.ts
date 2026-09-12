@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       students.push(doc.data());
     });
 
-    // Dual-sort: Total Score (DESC), then Time Taken (ASC)
+    // Dual-sort: Total Score (DESC), then Time Taken (ASC - least time taken wins)
     students.sort((a, b) => {
       const scoreA = a.totalScore || 0;
       const scoreB = b.totalScore || 0;
@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
       const timeA = a.timeTakenSeconds || 0;
       const timeB = b.timeTakenSeconds || 0;
       if (timeA > 0 && timeB > 0 && timeA !== timeB) return timeA - timeB;
+      if (timeA > 0 && timeB <= 0) return -1;
+      if (timeB > 0 && timeA <= 0) return 1;
 
       return (b.correctCount || 0) - (a.correctCount || 0);
     });

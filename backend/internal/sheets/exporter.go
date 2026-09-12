@@ -166,6 +166,9 @@ func RankStudents(students []models.StudentState) []models.StudentState {
 		if aHas && bHas && a.TimeTakenSeconds != b.TimeTakenSeconds {
 			return a.TimeTakenSeconds < b.TimeTakenSeconds
 		}
+		if aHas != bHas {
+			return aHas
+		}
 		return a.CorrectCount > b.CorrectCount
 	})
 

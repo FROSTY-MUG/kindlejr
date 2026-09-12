@@ -39,8 +39,7 @@ Real-time assessment platform built for **Kindle Jr 5.0**, an IEEE GEU SB hackat
 
 ## Question Bank Difficulty Rules
 
-- **15 Aptitude Questions**: Moderate difficulty sequence completion, logic puzzles, probability, rate/slab calculation problems.
-- **45 Coding Questions (C or Python)**: Restricted strictly to basic variable assignments, operators, `if`/`else`, and single `for`/`while` loops. Strictly NO functions, NO arrays/lists, NO pointers, NO nested loops.
+- **60 Coding Questions (C or Python)**: Restricted strictly to basic variable assignments, operators, `if`/`else`, and single `for`/`while` loops. Strictly NO functions, NO arrays/lists, NO pointers, NO nested loops.
 
 ---
 

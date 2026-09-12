@@ -366,7 +366,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="text-lg sm:text-2xl font-medium text-slate-600 tracking-wide max-w-2xl mx-auto"
           >
-            The Premier Technical & Aptitude Challenge of Graphic Era University
+            The Premier Technical Challenge of Graphic Era University
           </motion.p>
         </div>
 
