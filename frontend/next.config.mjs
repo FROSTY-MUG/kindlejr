@@ -9,6 +9,8 @@ const isWindows = process.platform === "win32";
 
 const nextConfig = {
   reactStrictMode: true,
+  images: { unoptimized: true },
+  generateEtags: false,
   ...(isWindows ? {} : { output: "standalone" }),
   async rewrites() {
     const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;

@@ -114,7 +114,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       {/* Fixed Top Bar Header */}
       <header className="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b-2 border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
-          <img src="/image_da2c44.png" alt="Graphic Era | IEEE SB" className="h-14 w-auto object-contain" />
+          <img src="/ieee-logo.png" alt="Graphic Era | IEEE SB" className="h-14 w-auto object-contain" />
           <div className="h-6 w-[2px] bg-slate-200" />
           <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 flex items-center gap-2">
             <span className="text-blue-600 font-extrabold">Kindle Jr 5.0</span>

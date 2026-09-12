@@ -284,7 +284,7 @@ export default function Home() {
       {/* Top-Left Header Logo - High Resolution GEU Crest & IEEE SB */}
       <div className="absolute top-6 left-6 z-50 flex items-center">
         <img
-          src="/image_da2c44.png"
+          src="/ieee-logo.png"
           alt="Graphic Era | IEEE SB"
           className="h-14 w-auto object-contain"
         />
@@ -294,7 +294,7 @@ export default function Home() {
       <header className="fixed top-0 left-0 w-full z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-3.5">
           <img
-            src="/image_da2c44.png"
+            src="/ieee-logo.png"
             alt="Graphic Era | IEEE SB"
             className="h-14 w-auto object-contain"
           />
