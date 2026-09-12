@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import useSWR from "swr";
+import * as XLSX from "xlsx";
 import {
   Users,
   BarChart2,
@@ -23,15 +24,8 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
-  const [leaderboard, setLeaderboard] = useState<AdminLeaderboardEntry[]>([]);
-  const [totalStudents, setTotalStudents] = useState<number>(0);
-  const [avgScore, setAvgScore] = useState<number>(0);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportMessage, setExportMessage] = useState<string>("");
-  const [lastUpdated, setLastUpdated] = useState<string>("");
-  const [isConnected, setIsConnected] = useState<boolean>(true);
-  const [persistenceMode, setPersistenceMode] = useState<string>("unknown");
 
   // The key must match the backend's ADMIN_SECRET exactly. It is injected at
   // build time via NEXT_PUBLIC_ADMIN_SECRET; the literal fallback mirrors the
@@ -44,7 +38,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       headers: { "X-Admin-Key": adminSecretKey, "Cache-Control": "no-cache" },
     }).then((res) => res.json());
 
-  const { data, error } = useSWR("/api/admin/leaderboard", fetcher, {
+  const { data, error, mutate } = useSWR("/api/admin/leaderboard", fetcher, {
     refreshInterval: 2000,
     dedupingInterval: 1000,
   });
@@ -52,7 +46,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
   const isRefreshing = !data && !error;
   const isConnected = !error;
 
-  const leaderboard = data?.students || [];
+  const leaderboard: AdminLeaderboardEntry[] = data?.students || [];
   const totalStudents = data?.totalStudents || leaderboard.length;
   const persistenceMode = data?.persistenceMode || "unknown";
   const lastUpdated = data ? new Date().toLocaleTimeString() : "";
@@ -269,7 +263,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
               </span>
 
               <button
-                onClick={fetchTelemetry}
+                onClick={() => mutate()}
                 className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border-2 border-slate-200 transition-colors"
                 title="Refresh Leaderboard"
               >
