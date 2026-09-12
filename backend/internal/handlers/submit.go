@@ -49,7 +49,7 @@ func syncStudentToSheetInBackground(student models.StudentState) {
 		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 		defer cancel()
 
-		if err := sheets.SyncStudentRow(ctx, st); err != nil {
+		if err := sheets.SyncStudentRow(ctx, st, true); err != nil {
 			log.Printf("[SHEETS] final row sync failed for %s: %v", st.StudentID, err)
 			return
 		}

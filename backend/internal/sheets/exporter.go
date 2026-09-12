@@ -270,9 +270,91 @@ func SortLeaderboardRange(ctx context.Context, spreadsheetID string, sheetID int
 	return nil
 }
 
-// EnsureHeaders writes the header row when it is missing or stale. It is
-// idempotent, so it is safe to call before every sync.
+var (
+	headersEnsuredMu sync.RWMutex
+	headersEnsured   bool
+
+	studentRowMap   sync.Map // studentID -> int
+	highestRowIndex int64
+	highestRowMu    sync.Mutex
+
+	sortMu    sync.Mutex
+	sortTimer *time.Timer
+
+	syncWorkerOnce  sync.Once
+	syncChan        = make(chan string, 4096)
+	pendingSyncMu   sync.Mutex
+	pendingStudents = make(map[string]models.StudentState)
+)
+
+func initSyncWorker() {
+	syncWorkerOnce.Do(func() {
+		go func() {
+			// Rate limit to 1 sync per 400ms (max 150 req/min, safe from 300/min quota)
+			ticker := time.NewTicker(400 * time.Millisecond)
+			defer ticker.Stop()
+			for range ticker.C {
+				select {
+				case studentID := <-syncChan:
+					pendingSyncMu.Lock()
+					st, exists := pendingStudents[studentID]
+					delete(pendingStudents, studentID)
+					pendingSyncMu.Unlock()
+
+					if !exists {
+						continue
+					}
+					ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+					if err := SyncStudentRow(ctx, st, false); err != nil {
+						log.Printf("[SHEETS] Coalesced sync failed for %s: %v", st.StudentID, err)
+					}
+					cancel()
+				default:
+				}
+			}
+		}()
+	})
+}
+
+// QueueStudentSync coalesces keystroke updates and throttles writes safely within Sheets API quota.
+func QueueStudentSync(student models.StudentState) {
+	initSyncWorker()
+	pendingSyncMu.Lock()
+	_, alreadyQueued := pendingStudents[student.StudentID]
+	pendingStudents[student.StudentID] = student
+	pendingSyncMu.Unlock()
+
+	if !alreadyQueued {
+		select {
+		case syncChan <- student.StudentID:
+		default:
+		}
+	}
+}
+
+// TriggerDebouncedSort queues a leaderboard sort up to 15s in the future so rapid writes don't collide.
+func TriggerDebouncedSort(spreadsheetID string, sheetID int64, rowCount int) {
+	sortMu.Lock()
+	defer sortMu.Unlock()
+	if sortTimer != nil {
+		sortTimer.Stop()
+	}
+	sortTimer = time.AfterFunc(15*time.Second, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		_ = SortLeaderboardRange(ctx, spreadsheetID, sheetID, rowCount)
+	})
+}
+
+// EnsureHeaders writes the header row when it is missing or stale. Caches success in memory.
 func EnsureHeaders(ctx context.Context, spreadsheetID, sheetName string) error {
+	headersEnsuredMu.RLock()
+	if headersEnsured {
+		headersEnsuredMu.RUnlock()
+		return nil
+	}
+	headersEnsuredMu.RUnlock()
+
 	srv, err := service(ctx)
 	if err != nil {
 		return err
@@ -281,6 +363,9 @@ func EnsureHeaders(ctx context.Context, spreadsheetID, sheetName string) error {
 	readRng := sheetName + "!A1:P1"
 	current, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRng).Context(ctx).Do()
 	if err == nil && len(current.Values) > 0 && len(current.Values[0]) >= columnCount {
+		headersEnsuredMu.Lock()
+		headersEnsured = true
+		headersEnsuredMu.Unlock()
 		return nil
 	}
 
@@ -292,17 +377,15 @@ func EnsureHeaders(ctx context.Context, spreadsheetID, sheetName string) error {
 	if err != nil {
 		return fmt.Errorf("failed to write header row: %w", err)
 	}
+
+	headersEnsuredMu.Lock()
+	headersEnsured = true
+	headersEnsuredMu.Unlock()
 	return nil
 }
 
-// SyncStudentRow upserts a single student into the sheet.
-//
-// This is the real-time path: it runs after every debounced answer and after a
-// submission, so the sheet tracks the exam live. It locates the student's row by
-// Student ID (column C) and overwrites it in place, which keeps the operation to
-// a single read plus a single write and avoids re-sorting the entire table on
-// every keystroke.
-func SyncStudentRow(ctx context.Context, student models.StudentState) error {
+// SyncStudentRow upserts a single student into the sheet using cached row indices and throttled sorts.
+func SyncStudentRow(ctx context.Context, student models.StudentState, immediateSort bool) error {
 	spreadsheetID := SpreadsheetID()
 	if spreadsheetID == "" {
 		return fmt.Errorf("spreadsheet id is empty (set GOOGLE_SHEET_ID)")
@@ -318,45 +401,64 @@ func SyncStudentRow(ctx context.Context, student models.StudentState) error {
 		return err
 	}
 
-	ids, err := srv.Spreadsheets.Values.
-		Get(spreadsheetID, fmt.Sprintf("%s!C2:C", sheetName)).
-		Context(ctx).Do()
-	if err != nil {
-		return fmt.Errorf("failed to read student id column: %w", err)
-	}
-
-	// Row 1 is the header, so the first data row is 2.
 	rowIndex := -1
-	for i, row := range ids.Values {
-		if len(row) > 0 && fmt.Sprint(row[0]) == student.StudentID {
-			rowIndex = i + 2
-			break
+	if val, ok := studentRowMap.Load(student.StudentID); ok {
+		rowIndex = val.(int)
+	} else {
+		ids, err := srv.Spreadsheets.Values.
+			Get(spreadsheetID, fmt.Sprintf("%s!C2:C", sheetName)).
+			Context(ctx).Do()
+		if err != nil {
+			return fmt.Errorf("failed to read student id column: %w", err)
 		}
+
+		highestRowMu.Lock()
+		highestRowIndex = int64(len(ids.Values) + 1)
+		for i, row := range ids.Values {
+			if len(row) > 0 {
+				idStr := fmt.Sprint(row[0])
+				idx := i + 2
+				studentRowMap.Store(idStr, idx)
+				if idStr == student.StudentID {
+					rowIndex = idx
+				}
+			}
+		}
+
+		if rowIndex == -1 {
+			highestRowIndex++
+			rowIndex = int(highestRowIndex)
+			studentRowMap.Store(student.StudentID, rowIndex)
+		}
+		highestRowMu.Unlock()
 	}
 
 	values := [][]interface{}{studentRow(0, student)}
 	a1 := fmt.Sprintf("%s!A%d", sheetName, rowIndex)
-	if rowIndex == -1 {
-		// New student: append at the end of column A. Rank is recomputed by the
-		// sort that follows, so a placeholder 0 is acceptable here.
-		a1 = fmt.Sprintf("%s!A%d", sheetName, len(ids.Values)+2)
-	}
 
 	vr := &sheets.ValueRange{Values: values}
 	if _, err := srv.Spreadsheets.Values.
 		Update(spreadsheetID, a1, vr).
 		ValueInputOption("USER_ENTERED").
 		Context(ctx).Do(); err != nil {
+		// Invalidate cache entry on error so subsequent attempts re-query
+		studentRowMap.Delete(student.StudentID)
 		return fmt.Errorf("failed to upsert student row: %w", err)
 	}
 
-	// Re-rank in place. Google Sheets applies the ordering server-side, so this
-	// stays correct without the backend re-reading every row.
-	total, err := srv.Spreadsheets.Values.
-		Get(spreadsheetID, fmt.Sprintf("%s!C2:C", sheetName)).
-		Context(ctx).Do()
-	if err == nil {
-		_ = SortLeaderboardRange(ctx, spreadsheetID, ParseSheetID(), len(total.Values)+1)
+	// Calculate approximate row count
+	highestRowMu.Lock()
+	count := int(highestRowIndex)
+	if count < rowIndex {
+		count = rowIndex
+		highestRowIndex = int64(count)
+	}
+	highestRowMu.Unlock()
+
+	if immediateSort {
+		_ = SortLeaderboardRange(ctx, spreadsheetID, ParseSheetID(), count)
+	} else {
+		TriggerDebouncedSort(spreadsheetID, ParseSheetID(), count)
 	}
 
 	return nil

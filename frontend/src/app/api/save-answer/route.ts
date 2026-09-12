@@ -48,11 +48,6 @@ export async function POST(req: NextRequest) {
 
       await docRef.set(studentData, { merge: true });
 
-      // Dual-write to Google Sheets asynchronously without blocking request
-      syncStudentRow(studentData).catch((err) => {
-        console.warn("[SHEETS] Background sync failed:", err?.message || err);
-      });
-
       return NextResponse.json({
         status: "success",
         studentId,

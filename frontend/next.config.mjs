@@ -10,6 +10,17 @@ const isWindows = process.platform === "win32";
 const nextConfig = {
   reactStrictMode: true,
   ...(isWindows ? {} : { output: "standalone" }),
+  async rewrites() {
+    const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
+    if (!backendUrl) return [];
+    const target = backendUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${target}/api/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

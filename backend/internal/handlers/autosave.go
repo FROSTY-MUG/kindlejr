@@ -125,20 +125,12 @@ func RealTimeAutoSaveAnswer(store *db.Store, dataPath string) http.HandlerFunc {
 			return
 		}
 
-		// Dual-write: mirror the updated record to the live Google Sheet. This
-		// runs on a detached context in its own goroutine so a slow Sheets API
-		// can never add latency to the keystroke path or fail the request. The
-		// sheet is a projection of Firestore, so a dropped sync simply heals on
-		// the next keystroke or on the admin reconciliation pass.
+		// Dual-write: mirror the updated record to the live Google Sheet via rate-limited queue.
+		// The queue coalesces rapid keystrokes from the same student and throttles
+		// requests safely below Google Sheets API quota (max 150/min vs 300/min quota).
 		syncSnapshot := *existingState
 		syncSnapshot.UpdatedAt = time.Now().UTC()
-		go func(st models.StudentState) {
-			syncCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			defer cancel()
-			if err := sheets.SyncStudentRow(syncCtx, st); err != nil {
-				log.Printf("[SHEETS] real-time row sync failed for %s: %v", st.StudentID, err)
-			}
-		}(syncSnapshot)
+		sheets.QueueStudentSync(syncSnapshot)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

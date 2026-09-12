@@ -1,6 +1,17 @@
 import { getFallbackQuestions } from "../data/fallbackQuestions";
 
-const BASE_URL = "/api";
+const resolveBaseUrl = (): string => {
+  if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) {
+    const envUrl = process.env.NEXT_PUBLIC_API_URL.trim();
+    if (envUrl) {
+      const clean = envUrl.replace(/\/+$/, "");
+      return clean.endsWith("/api") ? clean : `${clean}/api`;
+    }
+  }
+  return "/api";
+};
+
+const BASE_URL = resolveBaseUrl();
 
 // Single source of truth for the exam duration. The backend uses the identical
 // value (3600s) in handlers/get_state.go, so the countdown, the local recovery
@@ -64,14 +75,16 @@ export interface AdminLeaderboardEntry {
 export async function fetchWithRetry(
   endpoint: string,
   options: RequestInit = {},
-  retries = 1,
-  backoff = 300
+  retries = 2,
+  backoff = 400
 ): Promise<Response> {
   const url = `${BASE_URL}${endpoint}`;
+  const isSubmit = endpoint.includes("/submit");
+  const timeoutMs = isSubmit ? 12000 : 6000;
   try {
     const response = await fetch(url, {
       ...options,
-      signal: options.signal || AbortSignal.timeout(3000),
+      signal: options.signal || AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok && retries > 0 && response.status >= 500) {
       throw new Error(`Server status ${response.status}`);
