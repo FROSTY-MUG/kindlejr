@@ -123,7 +123,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
     }
   };
 
-  const handleDownloadCSV = () => {
+  const handleDownloadExcel = () => {
     if (leaderboard.length === 0) return;
     const headers = ["Rank", "Name", "Student ID", "College Email", "Enrollment", "Course", "Track", "Strikes", "Correct", "Incorrect", "Unattempted", "Time Taken", "Score", "Cheated"];
     const rows = leaderboard.map((s, idx) => [
@@ -143,16 +143,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
       s.cheated ? "YES" : "NO"
     ]);
 
-    const csvContent = [headers.join(","), ...rows.map(e => e.map(String).map(v => `"${v.replace(/"/g, '""')}"`).join(","))].join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `KindleJr_Leaderboard_${new Date().toISOString().split("T")[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leaderboard");
+    XLSX.writeFile(workbook, `KindleJr_Leaderboard_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
   return (
@@ -267,12 +261,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExit }) => {
               </button>
 
               <button
-                onClick={handleDownloadCSV}
+                onClick={handleDownloadExcel}
                 className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow border border-emerald-500 flex items-center gap-1.5 transition-all"
-                title="Download Leaderboard as CSV"
+                title="Download Leaderboard as Excel"
               >
                 <Download className="w-3.5 h-3.5" />
-                Export CSV
+                Export Excel
               </button>
 
               <a
